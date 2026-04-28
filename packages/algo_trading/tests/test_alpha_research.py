@@ -59,7 +59,7 @@ from prophitai_algo_trading.alpha_signals import (
     VolumeShockAlpha,
 )
 from prophitai_algo_trading.construction import (
-    MagnitudeWeightedLongShortPCM,
+    MagnitudeWeightedLongShortConstructor,
 )
 from prophitai_data.db.models.market import Ticker
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
@@ -157,7 +157,7 @@ def _load_panel():
 
 def _build_pcm():
     """Fresh PCM factory — called once per isolated alpha run."""
-    return MagnitudeWeightedLongShortPCM(
+    return MagnitudeWeightedLongShortConstructor(
         gross_exposure=1.5,
         per_position_cap=0.10,
         quantile=0.20,

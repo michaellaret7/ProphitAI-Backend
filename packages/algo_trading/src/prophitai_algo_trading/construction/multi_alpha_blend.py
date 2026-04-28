@@ -1,6 +1,6 @@
-"""MultiAlphaBlendPCM — blend insights from multiple alphas, then delegate.
+"""MultiAlphaBlender — blend insights from multiple alphas, then delegate.
 
-The PCM that makes multi-alpha portfolios clean. Pipeline:
+The signal blender that makes multi-alpha portfolios clean. Pipeline:
 
   1. Partition incoming insights by ``source_alpha``.
   2. For each alpha, cross-sectionally z-score its signed scores
@@ -9,8 +9,9 @@ The PCM that makes multi-alpha portfolios clean. Pipeline:
      using the static ``weights`` dict.
   4. Synthesize a single list of "blended" Insights with the composite
      as magnitude and ``source_alpha='blended'``.
-  5. Delegate to an inner PCM (typically MagnitudeWeightedLongShortPCM)
-     for the actual target construction.
+  5. Delegate to an inner PortfolioConstructor (typically
+     ``MagnitudeWeightedLongShortConstructor``) for the actual target
+     construction.
   6. Hand the inner's targets + per-symbol composite + per-alpha
      contributions to a ``ProvenanceTracker`` for ``entry_alphas`` /
      ``exit_reason`` enrichment. Any provenance the inner already
@@ -20,8 +21,9 @@ The PCM that makes multi-alpha portfolios clean. Pipeline:
 
 This is the framework analog of the hand-rolled ``SignalCombiner`` +
 ``MagnitudeWeightedLongShort`` pair used in
-``projects/qc_test/multi_alpha_daily/``. The inner PCM is swappable —
-you can blend into EqualWeight, InsightWeighted, or any other PCM.
+``projects/qc_test/multi_alpha_daily/``. The inner constructor is
+swappable — you can blend into ``EqualWeightConstructor``,
+``InsightWeightedConstructor``, or any other ``PortfolioConstructor``.
 """
 
 from __future__ import annotations
@@ -34,28 +36,38 @@ from prophitai_algo_trading.core.models import (
     PortfolioTarget,
 )
 from prophitai_algo_trading.core.protocols import (
-    PortfolioConstructionModel,
-    VectorPCM,
+    PortfolioConstructor,
+    VectorPortfolioConstructor,
 )
-from prophitai_algo_trading.construction.base import BasePCM
 from prophitai_algo_trading.construction.helpers.event import (
     cross_sectional_zscore,
+)
+from prophitai_algo_trading.construction.provenance import (
+    ProvenanceTracker,
 )
 from prophitai_algo_trading.construction.helpers.vector import (
     zscore_rowwise,
 )
 
 
-class MultiAlphaBlendPCM(BasePCM):
-    """Cross-sec z-score + weighted blend → inner PCM.
+class MultiAlphaBlender:
+    """Cross-sec z-score + weighted blend → inner constructor.
+
+    A blender is NOT a constructor — it composes one. It produces a
+    composite score from N alphas and delegates portfolio construction
+    to its ``inner`` constructor. The ``create_targets`` and
+    ``build_weights`` methods satisfy ``PortfolioConstructor`` /
+    ``VectorPortfolioConstructor`` structurally (so the blender slots
+    into ``Algorithm.portfolio_construction`` like any constructor),
+    but the role is different — see the ``SignalBlender`` protocol.
 
     Args:
         weights: {alpha_name: weight}. Not re-normalized — negative weights
             flip a signal's contribution; weights not summing to 1 tilt
             the blended magnitude scale.
-        inner: A PortfolioConstructionModel that consumes the synthesized
+        inner: A PortfolioConstructor that consumes the synthesized
             blended insights and produces targets. Typical choice:
-            ``MagnitudeWeightedLongShortPCM``.
+            ``MagnitudeWeightedLongShortConstructor``.
         winsor_at: z-score clip applied per-alpha after z-scoring.
             ``None`` disables winsorization.
     """
@@ -63,18 +75,17 @@ class MultiAlphaBlendPCM(BasePCM):
     def __init__(
         self,
         weights: dict[str, float],
-        inner: PortfolioConstructionModel | VectorPCM,
+        inner: PortfolioConstructor | VectorPortfolioConstructor,
         winsor_at: float | None = 3.0,
     ):
         if not weights:
             raise ValueError("weights must be non-empty")
 
-        # Reason: rebalance_every=None — MAPM is a wrapper. Cadence
-        # gating belongs to the inner PCM. The base's scheduler is
-        # always-pass-through here (unused), but we still get
-        # ``self._provenance`` from super().__init__() which is the
-        # actual point of subclassing BasePCM.
-        super().__init__(rebalance_every=None)
+        # Reason: composition over inheritance — the blender uses the
+        # same ProvenanceTracker as constructors do for entry_alphas /
+        # exit_reason enrichment, but it doesn't need cadence-gating
+        # or the constructor's _build skeleton, so it skips the base.
+        self._provenance = ProvenanceTracker()
 
         self._weights = dict(weights)
         self._inner = inner
@@ -153,29 +164,29 @@ class MultiAlphaBlendPCM(BasePCM):
         )
 
     #     ================================
-    # --> Vectorized PCM
+    # --> Vectorized blender
     #     ================================
 
     def build_weights(
         self, scores: dict[str, pd.DataFrame],
     ) -> pd.DataFrame:
-        """Vectorized z-score + weighted blend → inner vector PCM.
+        """Vectorized z-score + weighted blend → inner vector constructor.
 
         Per alpha:
             1. Cross-sectional z-score per row (winsorize at ``winsor_at``).
             2. Multiply by configured static weight.
         Sum across alphas → composite score panel → hand to ``inner``
-        as a single-entry dict ``{"blended": composite}``. Inner PCM
-        does its own ranking / sizing / cadence.
+        as a single-entry dict ``{"blended": composite}``. Inner
+        constructor does its own ranking / sizing / cadence.
 
         Args:
             scores: ``{alpha_name: signed_score_panel}``.
 
         Returns:
-            ``[date x ticker]`` signed weight panel from the inner PCM.
+            ``[date x ticker]`` signed weight panel from the inner constructor.
         """
         if not scores:
-            raise ValueError("MultiAlphaBlendPCM.build_weights got no scores")
+            raise ValueError("MultiAlphaBlender.build_weights got no scores")
 
         first = next(iter(scores.values()))
 

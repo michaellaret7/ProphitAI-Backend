@@ -1,12 +1,12 @@
-"""Real-data test for the 4 Phase 2 PortfolioConstructionModels.
+"""Real-data test for the 4 Phase 2 PortfolioConstructors.
 
 Loads daily OHLCV for a 20-ticker universe, runs the 5 Phase 1 alphas to
 produce Insights, then runs each PCM on those Insights. Grades the
 PortfolioTargets against contract invariants:
     - target_shares float, no NaN
     - invested symbols not in the new book get target_shares = 0
-    - MultiAlphaBlendPCM produces 'blended' insights internally
-    - MagnitudeWeightedLongShortPCM preserves dollar-neutrality
+    - MultiAlphaBlender produces 'blended' insights internally
+    - MagnitudeWeightedLongShortConstructor preserves dollar-neutrality
       (|sum(long notional)| == |sum(short notional)| within tolerance)
 
 Run:
@@ -38,10 +38,10 @@ from prophitai_algo_trading.core import (
     PortfolioTarget,
 )
 from prophitai_algo_trading.construction import (
-    EqualWeightPCM,
-    InsightWeightedPCM,
-    MagnitudeWeightedLongShortPCM,
-    MultiAlphaBlendPCM,
+    EqualWeightConstructor,
+    InsightWeightedConstructor,
+    MagnitudeWeightedLongShortConstructor,
+    MultiAlphaBlender,
 )
 from prophitai_algo_trading.portfolio.portfolio import Portfolio
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
@@ -245,23 +245,23 @@ def main() -> None:
 
     print(f"\nCollected {len(insights)} insights from 5 alphas at {asof.date()}\n")
 
-    # --- EqualWeightPCM
-    pcm1 = EqualWeightPCM(max_positions=8, gross_exposure=1.0)
+    # --- EqualWeightConstructor
+    pcm1 = EqualWeightConstructor(max_positions=8, gross_exposure=1.0)
     targets1 = pcm1.create_targets(ctx, insights)
     _contract_check(targets1, ctx, "equal_weight")
     _summarize_book(targets1, ctx, "equal_weight")
 
-    # --- InsightWeightedPCM
-    pcm2 = InsightWeightedPCM(gross_exposure=1.0, per_position_cap=0.15, max_positions=10)
+    # --- InsightWeightedConstructor
+    pcm2 = InsightWeightedConstructor(gross_exposure=1.0, per_position_cap=0.15, max_positions=10)
     targets2 = pcm2.create_targets(ctx, insights)
     _contract_check(targets2, ctx, "insight_weighted")
     _summarize_book(targets2, ctx, "insight_weighted")
 
-    # --- MagnitudeWeightedLongShortPCM (using all raw insights — cross-alpha)
+    # --- MagnitudeWeightedLongShortConstructor (using all raw insights — cross-alpha)
     # Reason: raw insights are on different native scales; this PCM works
-    # best with z-scored input (see MultiAlphaBlendPCM below), but it
+    # best with z-scored input (see MultiAlphaBlender below), but it
     # should still produce a valid book on mixed-scale input.
-    pcm3 = MagnitudeWeightedLongShortPCM(
+    pcm3 = MagnitudeWeightedLongShortConstructor(
         gross_exposure=2.0, per_position_cap=0.10,
         quantile=0.20, min_abs_score=0.0,
     )
@@ -270,12 +270,12 @@ def main() -> None:
     _summarize_book(targets3, ctx, "magnitude_ls")
     _check_dollar_neutral(targets3, ctx)
 
-    # --- MultiAlphaBlendPCM(... inner=MagnitudeWeightedLongShortPCM)
-    inner = MagnitudeWeightedLongShortPCM(
+    # --- MultiAlphaBlender(... inner=MagnitudeWeightedLongShortConstructor)
+    inner = MagnitudeWeightedLongShortConstructor(
         gross_exposure=2.0, per_position_cap=0.10,
         quantile=0.20, min_abs_score=0.20,
     )
-    pcm4 = MultiAlphaBlendPCM(
+    pcm4 = MultiAlphaBlender(
         weights={
             "momentum":  0.30,
             "breakout":  0.25,

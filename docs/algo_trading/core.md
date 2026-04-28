@@ -25,7 +25,7 @@ class Insight:
 
 ### Magnitude
 
-Not standardized across alphas — can be expected return, z-score, Donchian position.  `MultiAlphaBlendPCM` cross-sectionally z-scores magnitude per-alpha before blending, so an alpha can emit whatever unit it wants natively.
+Not standardized across alphas — can be expected return, z-score, Donchian position.  `MultiAlphaBlender` cross-sectionally z-scores magnitude per-alpha before blending, so an alpha can emit whatever unit it wants natively.
 
 ### `source_alpha`
 
@@ -119,10 +119,10 @@ class AlphaModel(Protocol):
 
 Don't implement this directly — subclass one of the three bases in `alphas/base.py`.  See `alphas.md`.
 
-### `PortfolioConstructionModel`
+### `PortfolioConstructor`
 
 ```python
-class PortfolioConstructionModel(Protocol):
+class PortfolioConstructor(Protocol):
     def create_targets(
         self,
         ctx: AlgorithmContext,

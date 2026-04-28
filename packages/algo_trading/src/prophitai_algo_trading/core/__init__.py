@@ -18,10 +18,12 @@ from prophitai_algo_trading.core.protocols import (
     AlphaModel,
     ExecutionModel,
     LifecycleAwareRiskModel,
-    PortfolioConstructionModel,
+    PortfolioConstructor,
     RiskManagementModel,
+    SignalBlender,
     VectorAlpha,
-    VectorPCM,
+    VectorPortfolioConstructor,
+    VectorSignalBlender,
 )
 
 __all__ = [
@@ -31,11 +33,13 @@ __all__ = [
     "ExecutionModel",
     "Insight",
     "LifecycleAwareRiskModel",
-    "PortfolioConstructionModel",
+    "PortfolioConstructor",
     "PortfolioTarget",
     "PricePanel",
     "RiskManagementModel",
+    "SignalBlender",
     "VectorAlpha",
-    "VectorPCM",
+    "VectorPortfolioConstructor",
+    "VectorSignalBlender",
     "panel_from_per_ticker",
 ]

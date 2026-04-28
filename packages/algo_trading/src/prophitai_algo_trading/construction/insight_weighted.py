@@ -1,6 +1,6 @@
-"""InsightWeightedPCM — size positions proportional to insight magnitude.
+"""InsightWeightedConstructor — size positions proportional to insight magnitude.
 
-One step up from EqualWeightPCM. Every directional insight gets a
+One step up from EqualWeightConstructor. Every directional insight gets a
 position sized by |magnitude| / sum(|magnitude|) * gross_exposure. High-
 conviction insights get more capital than low-conviction ones.
 
@@ -22,7 +22,7 @@ from prophitai_algo_trading.core.models import (
     PortfolioTarget,
 )
 from prophitai_algo_trading.construction.base import (
-    BasePCM,
+    BaseConstructor,
     BuildResult,
 )
 from prophitai_algo_trading.construction.helpers.event import (
@@ -53,7 +53,7 @@ def _extract_weight(insight: Insight) -> float:
 # --> PCM
 #     ================================
 
-class InsightWeightedPCM(BasePCM):
+class InsightWeightedConstructor(BaseConstructor):
     """Magnitude-proportional sizing with an optional per-position cap.
 
     Args:

@@ -10,8 +10,8 @@ Quick start::
     from prophitai_algo_trading import Algorithm, Backtest, CostModel
     from prophitai_algo_trading.alpha_signals import MomentumAlpha, BreakoutAlpha
     from prophitai_algo_trading.construction import (
-        MagnitudeWeightedLongShortPCM,
-        MultiAlphaBlendPCM,
+        MagnitudeWeightedLongShortConstructor,
+        MultiAlphaBlender,
     )
     from prophitai_algo_trading.risk import (
         CompositeRiskModel, MaxDrawdownRiskModel, MaxGrossExposureRiskModel,
@@ -22,9 +22,9 @@ Quick start::
 
     algo = Algorithm(
         alphas=[MomentumAlpha(), BreakoutAlpha()],
-        portfolio_construction=MultiAlphaBlendPCM(
+        portfolio_construction=MultiAlphaBlender(
             weights={"momentum": 0.5, "breakout": 0.5},
-            inner=MagnitudeWeightedLongShortPCM(gross_exposure=1.5),
+            inner=MagnitudeWeightedLongShortConstructor(gross_exposure=1.5),
         ),
         risk_management=CompositeRiskModel([
             MaxDrawdownRiskModel(max_drawdown_pct=0.15),
@@ -38,12 +38,14 @@ Quick start::
 
 from prophitai_algo_trading.algorithm import Algorithm, VectorAlgorithm
 from prophitai_algo_trading.analytics import (
+    STANDARD_CADENCES,
     AlphaReport,
     AnalyticsConfig,
     BacktestResult,
     CrossAlphaReport,
     analyze_alpha,
     analyze_alphas,
+    cadence_sweep_for_alpha,
     calculate_metrics,
     print_alpha_report,
     print_alpha_research,
@@ -55,12 +57,14 @@ from prophitai_algo_trading.core import (
     Direction,
     ExecutionModel,
     Insight,
-    PortfolioConstructionModel,
+    PortfolioConstructor,
     PortfolioTarget,
     PricePanel,
     RiskManagementModel,
+    SignalBlender,
     VectorAlpha,
-    VectorPCM,
+    VectorPortfolioConstructor,
+    VectorSignalBlender,
     panel_from_per_ticker,
 )
 from prophitai_algo_trading.data import load_csv_data
@@ -83,11 +87,13 @@ __all__ = [
     "VectorAlgorithm",
     # Stage protocols
     "AlphaModel",
-    "PortfolioConstructionModel",
+    "PortfolioConstructor",
+    "SignalBlender",
     "RiskManagementModel",
     "ExecutionModel",
     "VectorAlpha",
-    "VectorPCM",
+    "VectorPortfolioConstructor",
+    "VectorSignalBlender",
     # Shared dataclasses + types
     "AlgorithmContext",
     "Insight",
@@ -105,8 +111,10 @@ __all__ = [
     "AnalyticsConfig",
     "BacktestResult",
     "CrossAlphaReport",
+    "STANDARD_CADENCES",
     "analyze_alpha",
     "analyze_alphas",
+    "cadence_sweep_for_alpha",
     "calculate_metrics",
     "print_alpha_report",
     "print_alpha_research",

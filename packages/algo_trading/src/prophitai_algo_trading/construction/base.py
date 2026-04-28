@@ -1,22 +1,22 @@
-"""``BasePCM`` — shared scaffolding for PortfolioConstructionModels.
+"""``BaseConstructor`` — shared scaffolding for portfolio constructors.
 
-Single base class that standardizes the cross-cutting concerns every PCM
-needs (rebalance cadence, provenance enrichment, orphan-close handling)
-without forcing the construction algorithm. Subclasses follow one of two
-contracts:
+Single base class that standardizes the cross-cutting concerns every
+constructor needs (rebalance cadence, provenance enrichment, orphan-
+close handling) without forcing the construction algorithm. Subclasses
+follow one of two contracts:
 
-    Constructor pattern (3 of 4 in-tree PCMs):
-        Subclass ``BasePCM``, implement ``_build(ctx, insights) ->
-        BuildResult``. The base wraps your build with the standard
+    Constructor pattern (3 of 4 in-tree classes):
+        Subclass ``BaseConstructor``, implement ``_build(ctx, insights)
+        -> BuildResult``. The base wraps your build with the standard
         skeleton: rebalance gate -> _build -> append_close_orphans ->
         ProvenanceTracker.enrich.
 
-    Wrapper pattern (e.g. ``MultiAlphaBlendPCM``):
-        Subclass ``BasePCM``, override ``create_targets`` directly. Use
-        ``self._provenance`` for attribution. The default skeleton is
-        skipped because wrapper construction shape is "transform insights
-        -> delegate to inner -> enrich" — different from the constructor
-        pipeline.
+    Blender pattern (``MultiAlphaBlender``):
+        Subclass ``BaseConstructor``, override ``create_targets``
+        directly. Use ``self._provenance`` for attribution. The default
+        skeleton is skipped because blender shape is "transform insights
+        -> delegate to inner constructor -> enrich" — different from the
+        constructor pipeline.
 
 Both paths inherit ``self._provenance``, ``self._scheduler``, and any
 future cross-cutting concerns added to the base. That's the alignment
@@ -59,7 +59,7 @@ from prophitai_algo_trading.construction.provenance import (
 
 @dataclass
 class BuildResult:
-    """Output of ``BasePCM._build``.
+    """Output of ``BaseConstructor._build``.
 
     Carries everything the base needs to enrich and emit targets. Using
     a dataclass over a positional triple keeps the contract forward-
@@ -97,13 +97,13 @@ class BuildResult:
 # --> Base PCM
 #     ================================
 
-class BasePCM:
-    """Shared scaffolding for PCMs — cadence, provenance, orphan-close.
+class BaseConstructor:
+    """Shared scaffolding for constructors — cadence, provenance, orphan-close.
 
     Args:
         rebalance_every: How often to emit new targets. ``None`` = every
-            bar (most responsive, highest churn). For wrappers, pass
-            ``None`` since cadence gating belongs to the inner PCM.
+            bar (most responsive, highest churn). For blenders, pass
+            ``None`` since cadence gating belongs to the inner constructor.
     """
 
     def __init__(self, rebalance_every: timedelta | None = None):
@@ -130,7 +130,7 @@ class BasePCM:
             4. ``ProvenanceTracker.enrich`` stamps ``entry_alphas`` /
                ``exit_reason`` on every target.
 
-        Wrapper PCMs (e.g. ``MultiAlphaBlendPCM``) override this method
+        Blenders (e.g. ``MultiAlphaBlender``) override this method
         directly because their shape is "transform insights -> delegate
         -> enrich," which doesn't fit the skeleton.
         """
@@ -154,17 +154,17 @@ class BasePCM:
         ctx: "AlgorithmContext",
         insights: list["Insight"],
     ) -> BuildResult:
-        """Constructor-pattern PCMs implement this.
+        """Constructor-pattern classes implement this.
 
         Returns ``BuildResult(targets, contributions, scores)`` where
         ``targets`` is the *new* book (orphan closes are appended by the
-        base). Wrapper PCMs override ``create_targets`` instead and
-        leave this raising.
+        base). Blenders override ``create_targets`` instead and leave
+        this raising.
         """
         raise NotImplementedError(
             f"{type(self).__name__} must either implement _build() "
-            "(for constructor PCMs) or override create_targets() "
-            "directly (for wrapper PCMs).",
+            "(for constructors) or override create_targets() directly "
+            "(for blenders).",
         )
 
     #     ================================

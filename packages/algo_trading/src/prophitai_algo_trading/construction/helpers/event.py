@@ -1,12 +1,12 @@
-"""Shared helpers for PortfolioConstructionModels.
+"""Shared helpers for portfolio constructors.
 
-Extracted so every PCM uses the same:
+Extracted so every constructor uses the same:
   - cross-sectional z-scoring (with winsorization)
   - rebalance-cadence gate
   - weight → shares conversion
   - "close-orphan-positions" logic (positions held but not in the new book)
 
-None of these are public API — PCMs import them internally.
+None of these are public API — constructors import them internally.
 """
 
 from __future__ import annotations

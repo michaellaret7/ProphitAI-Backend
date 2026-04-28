@@ -1,4 +1,4 @@
-"""MagnitudeWeightedLongShortPCM — decile-cut dollar-neutral L/S builder.
+"""MagnitudeWeightedLongShortConstructor — decile-cut dollar-neutral L/S builder.
 
 Takes per-symbol insights and builds a long/short book:
   1. Rank by signed score (``direction * magnitude``).
@@ -25,7 +25,7 @@ from prophitai_algo_trading.core.models import (
     PortfolioTarget,
 )
 from prophitai_algo_trading.construction.base import (
-    BasePCM,
+    BaseConstructor,
     BuildResult,
 )
 from prophitai_algo_trading.construction.helpers.event import (
@@ -98,7 +98,7 @@ def _rescale_to_neutral(
 # --> PCM
 #     ================================
 
-class MagnitudeWeightedLongShortPCM(BasePCM):
+class MagnitudeWeightedLongShortConstructor(BaseConstructor):
     """Decile-cut magnitude-weighted dollar-neutral builder.
 
     Args:
@@ -142,7 +142,7 @@ class MagnitudeWeightedLongShortPCM(BasePCM):
         insights: list[Insight],
     ) -> BuildResult:
         # Reason: one insight per symbol by construction (the PCM upstream
-        # of this — e.g. MultiAlphaBlendPCM — deduplicates). Use whatever
+        # of this — e.g. MultiAlphaBlender — deduplicates). Use whatever
         # comes in; if multiple exist for a symbol, the last wins.
         signed: dict[str, float] = {
             i.symbol: i.direction * (i.magnitude or 0.0)

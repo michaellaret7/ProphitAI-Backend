@@ -6,7 +6,7 @@ well-documented one-month reversal effect that otherwise contaminates
 raw momentum signals.
 
 Direction is the sign of the 12-1 return; magnitude is its absolute
-value. The ``PortfolioConstructionModel`` cross-sectionally z-scores
+value. The ``MultiAlphaBlender`` cross-sectionally z-scores
 magnitude before blending with other alphas.
 """
 

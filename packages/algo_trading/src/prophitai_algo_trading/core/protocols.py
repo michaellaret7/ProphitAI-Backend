@@ -8,7 +8,7 @@ Pipeline order (see framework.md for full ADR):
 
     AlphaModel.update(ctx) ─▶ list[Insight]
                                │
-    PortfolioConstructionModel.create_targets(ctx, insights) ─▶ list[PortfolioTarget]
+    PortfolioConstructor.create_targets(ctx, insights) ─▶ list[PortfolioTarget]
                                │
     RiskManagementModel.manage(ctx, targets) ─▶ list[PortfolioTarget]
                                │
@@ -71,20 +71,49 @@ class AlphaModel(Protocol):
 #     ================================
 
 @runtime_checkable
-class PortfolioConstructionModel(Protocol):
-    """Blends Insights into concrete PortfolioTargets.
+class PortfolioConstructor(Protocol):
+    """Turns Insights into concrete PortfolioTargets.
 
-    Owns rebalance cadence, weight scheme, and position cap logic. All
-    weight-to-shares math runs through
-    ``framework.portfolio_construction.base.weight_to_shares`` so every
-    PCM uses identical conversion semantics.
+    Owns selection (which names enter the book), sizing (how much per
+    name), neutrality (dollar / sector / etc.), per-position caps, and
+    rebalance cadence. All weight-to-shares math runs through
+    ``construction.helpers.event.weight_to_shares`` so every constructor
+    uses identical conversion semantics.
 
     Returns a full list of targets for the book *this bar*. Symbols not in
     the returned list are treated as "no target" — existing positions in
     those symbols stay as-is (Execution doesn't close them unilaterally
     based on omission). If you want to close a position, emit a target
     with ``target_shares=0.0``.
+
+    Distinct from ``SignalBlender``: a constructor consumes one set of
+    insights and produces actual positions; a blender consumes N sets of
+    insights and produces a single composite, then delegates to a
+    constructor.
     """
+
+    def create_targets(
+        self,
+        ctx: AlgorithmContext,
+        insights: list[Insight],
+    ) -> list[PortfolioTarget]: ...
+
+
+@runtime_checkable
+class SignalBlender(Protocol):
+    """Combines insights from multiple alphas into a single composite.
+
+    Blends N per-alpha insight streams into one synthetic insight
+    stream, then delegates to an inner ``PortfolioConstructor`` for the
+    actual sizing. The ``inner`` field is the constructor it delegates
+    to; without it a blender has nothing to deploy.
+
+    Structurally a blender is also a ``PortfolioConstructor`` (it
+    satisfies ``create_targets``) — but the role split makes it explicit
+    that blending and constructing are different responsibilities.
+    """
+
+    inner: "PortfolioConstructor"
 
     def create_targets(
         self,
@@ -185,25 +214,51 @@ class VectorAlpha(Protocol):
 
 
 @runtime_checkable
-class VectorPCM(Protocol):
-    """Vectorized PortfolioConstructionModel.
+class VectorPortfolioConstructor(Protocol):
+    """Vectorized portfolio constructor.
 
     Consumes ``{alpha_name: score_panel}`` and returns a single
     ``[date x ticker]`` weight panel. Rows represent target weights at
     each bar (positive = long, negative = short, NaN/0 = flat).
 
-    The PCM owns:
-      - blending policy across multiple alphas (or none — single-alpha
-        PCMs can ignore names entirely),
-      - sign / sizing / quantile / cap logic,
+    The constructor owns:
+      - selection (which names enter the book),
+      - sizing (magnitude / equal / quantile-cut),
+      - neutrality (dollar / sector / etc.),
+      - per-position caps,
       - rebalance cadence (returns a *dense* panel — non-rebalance
         rows must be forward-filled from the prior rebalance).
+
+    Single-alpha constructors typically receive a 1-entry ``scores``
+    dict; multi-alpha use cases run through a ``VectorSignalBlender``
+    first, which collapses to a 1-entry dict before calling the
+    constructor.
 
     Methods:
         build_weights(scores): Return a dense weight DataFrame.
             ``scores`` is keyed by alpha name; every value is a
             ``[date x ticker]`` panel with shared index and columns.
     """
+
+    def build_weights(
+        self, scores: dict[str, "pd.DataFrame"],
+    ) -> "pd.DataFrame": ...
+
+
+@runtime_checkable
+class VectorSignalBlender(Protocol):
+    """Vectorized signal blender.
+
+    Combines multiple per-alpha score panels into a single composite
+    score panel, then delegates to an inner ``VectorPortfolioConstructor``
+    for the actual weight construction. Returns a weight panel by
+    composition: blend → composite → inner.build_weights → weights.
+
+    The blender owns blending policy (z-score, weighted sum, winsor);
+    the inner owns selection / sizing / cadence.
+    """
+
+    inner: "VectorPortfolioConstructor"
 
     def build_weights(
         self, scores: dict[str, "pd.DataFrame"],

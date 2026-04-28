@@ -36,8 +36,8 @@ from prophitai_algo_trading.core import (
     PortfolioTarget,
 )
 from prophitai_algo_trading.construction import (
-    MagnitudeWeightedLongShortPCM,
-    MultiAlphaBlendPCM,
+    MagnitudeWeightedLongShortConstructor,
+    MultiAlphaBlender,
 )
 from prophitai_algo_trading.portfolio.portfolio import Portfolio, Position
 from prophitai_algo_trading.risk import (
@@ -131,10 +131,10 @@ def test_integration_pipeline() -> None:
     for alpha in alphas:
         insights.extend(alpha.update(ctx))
 
-    pcm = MultiAlphaBlendPCM(
+    pcm = MultiAlphaBlender(
         weights={"momentum": 0.3, "breakout": 0.25, "reversal": 0.15,
                  "low_vol": 0.15, "trend_vol": 0.15},
-        inner=MagnitudeWeightedLongShortPCM(
+        inner=MagnitudeWeightedLongShortConstructor(
             gross_exposure=2.5, per_position_cap=0.15,
             quantile=0.25, min_abs_score=0.0,
         ),

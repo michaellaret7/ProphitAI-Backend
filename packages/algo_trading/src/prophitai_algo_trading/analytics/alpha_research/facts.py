@@ -28,7 +28,7 @@ if TYPE_CHECKING:
         AnalyticsConfig,
     )
     from prophitai_algo_trading.core.panel import PricePanel
-    from prophitai_algo_trading.core.protocols import VectorAlpha, VectorPCM
+    from prophitai_algo_trading.core.protocols import VectorAlpha, VectorPortfolioConstructor
 
 
 #     ================================
@@ -113,7 +113,7 @@ class AnalyticsFacts:
 def build_facts(
     alpha: "VectorAlpha",
     panel: "PricePanel",
-    pcm_factory: Callable[[], "VectorPCM"],
+    pcm_factory: Callable[[], "VectorPortfolioConstructor"],
     config: "AnalyticsConfig",
     benchmark: pd.Series | None = None,
     forward_returns_cache: dict[int, pd.DataFrame] | None = None,
@@ -127,7 +127,7 @@ def build_facts(
     Args:
         alpha: Vectorized alpha implementing ``compute_panel``.
         panel: Source price panel.
-        pcm_factory: Zero-arg callable returning a fresh ``VectorPCM``.
+        pcm_factory: Zero-arg callable returning a fresh ``VectorPortfolioConstructor``.
         config: Active ``AnalyticsConfig``.
         benchmark: Optional benchmark price series.
         forward_returns_cache: Sweep-shared cache of forward returns

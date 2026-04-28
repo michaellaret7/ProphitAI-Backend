@@ -13,11 +13,13 @@ correction, and graduation flags.
 """
 
 from prophitai_algo_trading.analytics.alpha_research import (
+    STANDARD_CADENCES,
     AlphaReport,
     AnalyticsConfig,
     CrossAlphaReport,
     analyze_alpha,
     analyze_alphas,
+    cadence_sweep_for_alpha,
     print_alpha_report,
     print_alpha_research,
 )
@@ -34,8 +36,10 @@ __all__ = [
     "AlphaReport",
     "AnalyticsConfig",
     "CrossAlphaReport",
+    "STANDARD_CADENCES",
     "analyze_alpha",
     "analyze_alphas",
+    "cadence_sweep_for_alpha",
     "print_alpha_report",
     "print_alpha_research",
 ]

@@ -5,7 +5,7 @@ and prints timing + headline metrics. No pytest, no mocks — pulls
 daily OHLCV from the market_data DB and exercises the full pipeline:
 
     panel ─▶ alphas (momentum + reversal + breakout + low_vol + trend_vol)
-          ─▶ MultiAlphaBlendPCM(inner=MagnitudeWeightedLongShortPCM)
+          ─▶ MultiAlphaBlender(inner=MagnitudeWeightedLongShortConstructor)
           ─▶ weights → returns → equity → metrics
 
 Run:
@@ -33,8 +33,8 @@ from prophitai_algo_trading.alpha_signals import (
     TrendVolumeAlpha,
 )
 from prophitai_algo_trading.construction import (
-    MagnitudeWeightedLongShortPCM,
-    MultiAlphaBlendPCM,
+    MagnitudeWeightedLongShortConstructor,
+    MultiAlphaBlender,
 )
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 
@@ -97,7 +97,7 @@ def _load_panel():
 
 
 def _build_algo() -> VectorAlgorithm:
-    pcm = MultiAlphaBlendPCM(
+    pcm = MultiAlphaBlender(
         weights={
             "momentum":  0.50,
             "reversal":  0.20,
@@ -105,7 +105,7 @@ def _build_algo() -> VectorAlgorithm:
             "low_vol":   0.10,
             "trend_vol": 0.10,
         },
-        inner=MagnitudeWeightedLongShortPCM(
+        inner=MagnitudeWeightedLongShortConstructor(
             gross_exposure=1.5,
             per_position_cap=0.10,
             quantile=0.20,

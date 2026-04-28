@@ -1,32 +1,33 @@
-"""Built-in PortfolioConstructionModels — Insights → PortfolioTargets.
+"""Built-in portfolio constructors and the multi-alpha blender.
 
-Four primitives covering the common cases:
+Three constructors + one blender, covering the common cases:
 
-    EqualWeightPCM            top-N equal-weight by |signed score|
-    InsightWeightedPCM        magnitude-proportional, per-position cap
-    MagnitudeWeightedLongShortPCM   decile-cut dollar-neutral L/S
-    MultiAlphaBlendPCM        z-score per alpha, weighted blend → inner PCM
+    EqualWeightConstructor               top-N equal-weight by |signed score|
+    InsightWeightedConstructor           magnitude-proportional, per-position cap
+    MagnitudeWeightedLongShortConstructor   decile-cut dollar-neutral L/S
+    MultiAlphaBlender                    z-score per alpha, weighted blend → inner constructor
 
-All four satisfy the ``PortfolioConstructionModel`` protocol. Compose as
-needed — MultiAlphaBlendPCM nests another PCM as its ``inner``.
+Constructors satisfy the ``PortfolioConstructor`` protocol; the blender
+satisfies ``SignalBlender``. Compose as needed — ``MultiAlphaBlender``
+nests a ``PortfolioConstructor`` as its ``inner``.
 """
 
 from prophitai_algo_trading.construction.equal_weight import (
-    EqualWeightPCM,
+    EqualWeightConstructor,
 )
 from prophitai_algo_trading.construction.insight_weighted import (
-    InsightWeightedPCM,
+    InsightWeightedConstructor,
 )
 from prophitai_algo_trading.construction.magnitude_ls import (
-    MagnitudeWeightedLongShortPCM,
+    MagnitudeWeightedLongShortConstructor,
 )
 from prophitai_algo_trading.construction.multi_alpha_blend import (
-    MultiAlphaBlendPCM,
+    MultiAlphaBlender,
 )
 
 __all__ = [
-    "EqualWeightPCM",
-    "InsightWeightedPCM",
-    "MagnitudeWeightedLongShortPCM",
-    "MultiAlphaBlendPCM",
+    "EqualWeightConstructor",
+    "InsightWeightedConstructor",
+    "MagnitudeWeightedLongShortConstructor",
+    "MultiAlphaBlender",
 ]

@@ -26,7 +26,7 @@ If you're an agent building a new strategy for the first time, read in this orde
 | Task | Read |
 |------|------|
 | Write a new signal | [alphas.md](alphas.md) |
-| Combine multiple alphas | [portfolio_construction.md](portfolio_construction.md) `#MultiAlphaBlendPCM` |
+| Combine multiple alphas | [portfolio_construction.md](portfolio_construction.md) `#MultiAlphaBlender` |
 | Add a stop-loss / trailing stop | [risk.md](risk.md) `#Exits` |
 | Cap gross exposure | [risk.md](risk.md) `#MaxGrossExposureRiskModel` |
 | Swap backtest → live | [execution.md](execution.md) `#The-sink-pattern` |
@@ -39,7 +39,7 @@ If you're an agent building a new strategy for the first time, read in this orde
 
 ```
 AlphaModel.update(ctx)                          →  alphas.md
-PortfolioConstructionModel.create_targets(...)  →  portfolio_construction.md
+PortfolioConstructor.create_targets(...)  →  portfolio_construction.md
 RiskManagementModel.manage(...)                 →  risk.md
 ExecutionModel.execute(...)                     →  execution.md
 ```
@@ -84,7 +84,7 @@ Everything that matters is re-exported from `prophitai_algo_trading`:
 from prophitai_algo_trading import (
     # Framework core
     Algorithm, AlgorithmContext, Insight, PortfolioTarget, MarketDataView,
-    AlphaModel, PortfolioConstructionModel, RiskManagementModel, ExecutionModel,
+    AlphaModel, PortfolioConstructor, RiskManagementModel, ExecutionModel,
     # Engines
     Backtest, BarRunner, LiveRunner,
     # Portfolio / accounting

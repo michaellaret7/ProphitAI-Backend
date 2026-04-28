@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from prophitai_algo_trading.core.protocols import VectorAlpha, VectorPCM
+from prophitai_algo_trading.core.protocols import VectorAlpha, VectorPortfolioConstructor
 
 
 #     ================================
@@ -62,7 +62,7 @@ class VectorAlgorithm:
     """
 
     alphas: list[VectorAlpha]
-    pcm: VectorPCM
+    pcm: VectorPortfolioConstructor
     initial_capital: float = 1_000_000.0
     cost_per_turnover: float = 0.0
 

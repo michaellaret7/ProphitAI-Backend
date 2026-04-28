@@ -59,6 +59,35 @@ def _interpolate_breakeven(
 
     return cost_low + fraction * (cost_high - cost_low)
 
+def _find_breakeven(cost_curve: dict[float, float]) -> float | None:
+    """Locate the breakeven cost in a sorted ``{cost: return}`` dict.
+
+    Walks the grid looking for the first cost where return drops from
+    non-negative to negative; interpolates between that pair.
+    """
+    items = sorted(cost_curve.items())
+
+    if not items:
+        return None
+
+    _, first_return = items[0]
+
+    if first_return < 0.0:
+        return None
+
+    for (low_cost, low_ret), (high_cost, high_ret) in zip(items[:-1], items[1:]):
+        if low_ret >= 0.0 > high_ret:
+            return round(
+                _interpolate_breakeven(low_cost, low_ret, high_cost, high_ret),
+                2,
+            )
+
+    _, last_return = items[-1]
+
+    if last_return >= 0.0:
+        return float("inf")
+
+    return None
 
 #     ================================
 # --> Public analyzer
@@ -101,33 +130,3 @@ def compute_cost_breakeven(
         "cost_breakeven_bps": breakeven,
     }
 
-
-def _find_breakeven(cost_curve: dict[float, float]) -> float | None:
-    """Locate the breakeven cost in a sorted ``{cost: return}`` dict.
-
-    Walks the grid looking for the first cost where return drops from
-    non-negative to negative; interpolates between that pair.
-    """
-    items = sorted(cost_curve.items())
-
-    if not items:
-        return None
-
-    _, first_return = items[0]
-
-    if first_return < 0.0:
-        return None
-
-    for (low_cost, low_ret), (high_cost, high_ret) in zip(items[:-1], items[1:]):
-        if low_ret >= 0.0 > high_ret:
-            return round(
-                _interpolate_breakeven(low_cost, low_ret, high_cost, high_ret),
-                2,
-            )
-
-    _, last_return = items[-1]
-
-    if last_return >= 0.0:
-        return float("inf")
-
-    return None

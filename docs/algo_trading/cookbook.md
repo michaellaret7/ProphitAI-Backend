@@ -171,15 +171,15 @@ __all__ = [
 
 ## 3. Portfolio construction
 
-For multi-alpha strategies, use the composite pattern: `MultiAlphaBlendPCM` wrapping a concrete PCM.
+For multi-alpha strategies, use the composite pattern: `MultiAlphaBlender` wrapping a concrete PCM.
 
 ```python
 from prophitai_algo_trading.portfolio_construction import (
-    MagnitudeWeightedLongShortPCM,
-    MultiAlphaBlendPCM,
+    MagnitudeWeightedLongShortConstructor,
+    MultiAlphaBlender,
 )
 
-pcm = MultiAlphaBlendPCM(
+pcm = MultiAlphaBlender(
     weights={
         "rsi_reversion":       0.12,
         "bollinger_reversion": 0.12,
@@ -190,7 +190,7 @@ pcm = MultiAlphaBlendPCM(
         "rs_rank":             0.14,
         "cointegration_pair":  0.20,
     },
-    inner=MagnitudeWeightedLongShortPCM(
+    inner=MagnitudeWeightedLongShortConstructor(
         gross_exposure=1.5,
         per_position_cap=0.06,
         quantile=0.15,
@@ -204,9 +204,9 @@ Weight-dict keys MUST match `alpha.name` values.  `Algorithm.__post_init__` enfo
 Single-alpha strategies skip the blend:
 
 ```python
-pcm = MagnitudeWeightedLongShortPCM(gross_exposure=1.5)
+pcm = MagnitudeWeightedLongShortConstructor(gross_exposure=1.5)
 # or
-pcm = EqualWeightPCM(max_positions=10, gross_exposure=1.0)
+pcm = EqualWeightConstructor(max_positions=10, gross_exposure=1.0)
 ```
 
 Read `portfolio_construction.md` for all four built-ins and when to use each.
@@ -357,6 +357,6 @@ Once the grader passes cleanly, the plumbing is good.  Then you can iterate on s
 
 ## Next strategies to try
 
-- Single-alpha with a tight stop: `MomentumAlpha()` + `MagnitudeWeightedLongShortPCM` + `StopLossExit(0.05)`.
-- Pairs-only stat arb: `CointegrationPairAlpha(pairs=SECTOR_PAIRS)` + `InsightWeightedPCM` + `TimeStop(max_bars=30)`.
-- Long-only momentum: `MomentumAlpha() + LowVolAlpha()` blended, `InsightWeightedPCM(gross_exposure=1.0)` (no shorts), `MaxDrawdownRiskModel` + `MaxGrossExposureRiskModel(1.0)`.
+- Single-alpha with a tight stop: `MomentumAlpha()` + `MagnitudeWeightedLongShortConstructor` + `StopLossExit(0.05)`.
+- Pairs-only stat arb: `CointegrationPairAlpha(pairs=SECTOR_PAIRS)` + `InsightWeightedConstructor` + `TimeStop(max_bars=30)`.
+- Long-only momentum: `MomentumAlpha() + LowVolAlpha()` blended, `InsightWeightedConstructor(gross_exposure=1.0)` (no shorts), `MaxDrawdownRiskModel` + `MaxGrossExposureRiskModel(1.0)`.

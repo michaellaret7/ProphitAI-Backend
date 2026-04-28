@@ -1,4 +1,4 @@
-"""Shared helpers for vectorized PortfolioConstructionModels.
+"""Shared helpers for vectorized portfolio constructors.
 
 Pure ``[date x ticker]`` panel transforms — no per-bar state, no
 ``AlgorithmContext``. Exposed as a small toolkit so custom user PCMs

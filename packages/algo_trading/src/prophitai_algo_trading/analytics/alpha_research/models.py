@@ -205,6 +205,11 @@ class AlphaReport:
     cost_breakeven_bps: float | None = None
     cost_curve: dict[float, float] | None = None
 
+    # Cadence sweep (populated only by explicit cadence_sweep_for_alpha call —
+    # not part of the bulk pipeline because it requires N extra backtests)
+    cadence_sweep: dict[str, dict[str, float]] | None = None
+    best_cadence: str | None = None
+
     # Cross-alpha projections (populated by analyze_alphas only)
     top_correlations: list[tuple[str, float]] | None = None
     cluster_id: int | None = None
@@ -255,6 +260,8 @@ class AlphaReport:
             "lag_sharpe_decay": _round_or_none(self.lag_sharpe_decay, 3),
             "cost_breakeven_bps": _round_or_none(self.cost_breakeven_bps, 2),
             "cost_curve": self.cost_curve,
+            "cadence_sweep": self.cadence_sweep,
+            "best_cadence": self.best_cadence,
             "top_correlations": self.top_correlations,
             "cluster_id": self.cluster_id,
             "cluster_peers": self.cluster_peers,

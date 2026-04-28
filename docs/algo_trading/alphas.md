@@ -16,7 +16,7 @@ Every alpha subclass must set these:
 
 | Attribute | Type | Meaning |
 |-----------|------|---------|
-| `name` | `str` (ClassVar) | Unique identifier.  `MultiAlphaBlendPCM` partitions insights by this — must match the key in its `weights` dict. |
+| `name` | `str` (ClassVar) | Unique identifier.  `MultiAlphaBlender` partitions insights by this — must match the key in its `weights` dict. |
 | `lookback` | `int` | Bars of history required before `update()` emits.  Engines skip alpha until this is met. |
 | `hold_days` | `int` | Informational `close_time` horizon. `PerSymbolAlpha` / `CrossSectionalAlpha` / `PairAlpha` use this to set `Insight.close_time = ctx.timestamp + timedelta(days=hold_days)`. |
 | `required_columns` | `tuple[str, ...]` (ClassVar) | OHLCV columns this alpha needs.  Default `("close",)`.  Frames missing any column are filtered out before your `compute_*` runs. |
@@ -239,7 +239,7 @@ The `Protocol` is the only real contract — the bases are just templates that e
 ## Multi-alpha considerations
 
 - **`name` must be unique across all alphas in an `Algorithm`.**  `Algorithm.__post_init__` raises on duplicates.
-- When two alphas emit for the same symbol, `MultiAlphaBlendPCM` blends them; PCMs that take one insight per symbol call `dedupe_insights(insights)` which keeps the highest `|direction * magnitude|`.
+- When two alphas emit for the same symbol, `MultiAlphaBlender` blends them; PCMs that take one insight per symbol call `dedupe_insights(insights)` which keeps the highest `|direction * magnitude|`.
 - `source_alpha` on the emitted `Insight` is auto-set from `self.name` by all three bases — don't set it manually.
 
 ## Built-in alphas (reference)

@@ -5,6 +5,11 @@ single alpha and prints the full ``AlphaReport``: identity, signal-
 quality scalars, IC decay table, sub-period stability slices, lag
 sensitivity, cost-breakeven curve, and backtest metrics.
 
+Then runs ``cadence_sweep_for_alpha`` to test the same alpha across
+five rebalance frequencies (daily / weekly / biweekly / monthly /
+quarterly) so you can see empirically what cadence the alpha prefers.
+The ``best_cadence`` line at the bottom names the highest-Sharpe one.
+
 Cross-alpha projection fields (``cluster_id``, ``passes_fdr``,
 ``top_correlations``) stay ``None`` — they only populate when running
 through ``analyze_alphas`` with N >= 2 alphas. Graduation also stays
@@ -28,8 +33,10 @@ from datetime import timedelta
 import pandas as pd
 
 from prophitai_algo_trading import (
+    STANDARD_CADENCES,
     AnalyticsConfig,
     analyze_alpha,
+    cadence_sweep_for_alpha,
     panel_from_per_ticker,
     print_alpha_report,
 )
@@ -38,7 +45,7 @@ from prophitai_algo_trading.alpha_signals import (
     # Add more imports here when swapping ALPHA_TO_TEST.
 )
 from prophitai_algo_trading.construction import (
-    MagnitudeWeightedLongShortPCM,
+    MagnitudeWeightedLongShortConstructor,
 )
 from prophitai_data.db.models.market import Ticker
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
@@ -143,12 +150,22 @@ def _load_panel():
 
 def _build_pcm():
     """Fresh PCM — same config as the sweep test for apples-to-apples."""
-    return MagnitudeWeightedLongShortPCM(
+    return _build_pcm_at_cadence(timedelta(weeks=1))
+
+
+def _build_pcm_at_cadence(cadence: timedelta | None):
+    """Cadence-parameterized PCM factory used by the cadence sweep.
+
+    The cadence sweep needs to instantiate the same PCM at multiple
+    rebalance frequencies. Generic ``pcm_factory`` doesn't expose the
+    cadence dial, so the sweep takes this factory variant explicitly.
+    """
+    return MagnitudeWeightedLongShortConstructor(
         gross_exposure=1.5,
         per_position_cap=0.10,
         quantile=0.20,
         min_abs_score=0.0,
-        rebalance_every=timedelta(weeks=1),
+        rebalance_every=cadence,
     )
 
 
@@ -184,6 +201,23 @@ def main() -> None:
     elapsed = time.perf_counter() - t0
 
     print(f"Research complete in {elapsed * 1000:.1f} ms")
+
+    print(f"\nCadence sweep ({len(STANDARD_CADENCES)} cadences) ...")
+
+    t0 = time.perf_counter()
+
+    cadence_sweep_for_alpha(
+        alpha=alpha,
+        panel=panel,
+        pcm_factory_at_cadence=_build_pcm_at_cadence,
+        config=config,
+        benchmark=benchmark if not benchmark.empty else None,
+        report=report,
+    )
+
+    elapsed = time.perf_counter() - t0
+
+    print(f"Cadence sweep complete in {elapsed * 1000:.1f} ms")
 
     print_alpha_report(report)
 

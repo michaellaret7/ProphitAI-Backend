@@ -21,7 +21,7 @@ from prophitai_algo_trading.core.models import (
     PortfolioTarget,
 )
 from prophitai_algo_trading.construction.base import (
-    BasePCM,
+    BaseConstructor,
     BuildResult,
 )
 from prophitai_algo_trading.construction.helpers.event import (
@@ -33,7 +33,7 @@ from prophitai_algo_trading.construction.helpers.vector import (
 )
 
 
-class EqualWeightPCM(BasePCM):
+class EqualWeightConstructor(BaseConstructor):
     """Top-N equal-weight construction.
 
     Ranks insights by ``direction * magnitude`` (signed score), picks the

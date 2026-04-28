@@ -12,6 +12,11 @@ Modules land here as features are added:
     PR 3: clustering, fdr, graduation
 """
 
+from prophitai_algo_trading.analytics.alpha_research.analyzers.cadence import (
+    STANDARD_CADENCES,
+    best_cadence_label,
+    compute_cadence_sweep,
+)
 from prophitai_algo_trading.analytics.alpha_research.analyzers.clustering import (
     cluster_by_correlation,
 )
@@ -64,4 +69,8 @@ __all__ = [
     "apply_fdr_correction",
     # Graduation
     "evaluate_graduation",
+    # Cadence sweep
+    "compute_cadence_sweep",
+    "best_cadence_label",
+    "STANDARD_CADENCES",
 ]

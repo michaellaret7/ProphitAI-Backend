@@ -51,7 +51,7 @@ class BarRunner:
 
         Sequence:
             1. Alphas → list[Insight] (concatenated across alphas).
-            2. PortfolioConstructionModel → list[PortfolioTarget].
+            2. PortfolioConstructor → list[PortfolioTarget].
             3. RiskManagementModel.manage → list[PortfolioTarget].
             4. Snapshot positions + trade count pre-execute.
             5. ExecutionModel.execute (mutates ctx.portfolio via sink).

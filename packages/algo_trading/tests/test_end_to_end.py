@@ -40,8 +40,8 @@ from prophitai_algo_trading.execution import (
     PortfolioSink,
 )
 from prophitai_algo_trading.construction import (
-    MagnitudeWeightedLongShortPCM,
-    MultiAlphaBlendPCM,
+    MagnitudeWeightedLongShortConstructor,
+    MultiAlphaBlender,
 )
 from prophitai_algo_trading.risk import (
     CompositeRiskModel,
@@ -101,7 +101,7 @@ def build_algorithm() -> Algorithm:
             LowVolAlpha(),
             TrendVolumeAlpha(),
         ],
-        portfolio_construction=MultiAlphaBlendPCM(
+        portfolio_construction=MultiAlphaBlender(
             weights={
                 "momentum":  0.30,
                 "breakout":  0.25,
@@ -109,7 +109,7 @@ def build_algorithm() -> Algorithm:
                 "low_vol":   0.15,
                 "trend_vol": 0.15,
             },
-            inner=MagnitudeWeightedLongShortPCM(
+            inner=MagnitudeWeightedLongShortConstructor(
                 gross_exposure=1.5,
                 per_position_cap=0.10,
                 quantile=0.20,
@@ -201,9 +201,9 @@ def test_forced_stop_loss_fires() -> None:
 
     tight_algo = Algorithm(
         alphas=[MomentumAlpha(), BreakoutAlpha()],
-        portfolio_construction=MultiAlphaBlendPCM(
+        portfolio_construction=MultiAlphaBlender(
             weights={"momentum": 0.5, "breakout": 0.5},
-            inner=MagnitudeWeightedLongShortPCM(
+            inner=MagnitudeWeightedLongShortConstructor(
                 gross_exposure=1.5, per_position_cap=0.10,
                 quantile=0.25, min_abs_score=0.0,
             ),

@@ -206,6 +206,25 @@ def print_alpha_report(report: AlphaReport) -> None:
         else:
             print(f"  breakeven_bps: {breakeven}")
 
+    if report.cadence_sweep is not None:
+        print("\nCadence sweep:")
+        print(
+            f"  {'cadence':>12s} {'sharpe':>10s} "
+            f"{'total_ret':>12s} {'turnover/yr':>14s}",
+        )
+
+        for label, metrics in report.cadence_sweep.items():
+            print(
+                f"  {label:>12s} {metrics['sharpe']:>10.2f} "
+                f"{metrics['total_return_pct']:>11.2f}% "
+                f"{metrics['turnover_per_year']:>14.2f}",
+            )
+
+        if report.best_cadence is not None:
+            print(f"  best_cadence: {report.best_cadence}")
+        else:
+            print("  best_cadence: none (alpha unprofitable at every cadence)")
+
     if report.metrics:
         print("\nBacktest metrics:")
 

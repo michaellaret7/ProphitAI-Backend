@@ -10,7 +10,7 @@ Every bar, for every `Algorithm`, the same four stages run in order:
 AlphaModel.update(ctx)
         │  list[Insight]
         ▼
-PortfolioConstructionModel.create_targets(ctx, insights)
+PortfolioConstructor.create_targets(ctx, insights)
         │  list[PortfolioTarget]
         ▼
 RiskManagementModel.manage(ctx, targets)
@@ -27,7 +27,7 @@ Each stage is a `Protocol` (see `core/protocols.py`) — duck-typed, no inherita
 | Stage | Package | Built-ins |
 |-------|---------|-----------|
 | Alpha | `alphas/` | `MomentumAlpha`, `BreakoutAlpha`, `ShortTermReversalAlpha`, `TrendVolumeAlpha`, `LowVolAlpha`, `CointegrationPairAlpha` |
-| Portfolio construction | `portfolio_construction/` | `EqualWeightPCM`, `InsightWeightedPCM`, `MagnitudeWeightedLongShortPCM`, `MultiAlphaBlendPCM` |
+| Portfolio construction | `portfolio_construction/` | `EqualWeightConstructor`, `InsightWeightedConstructor`, `MagnitudeWeightedLongShortConstructor`, `MultiAlphaBlender` |
 | Risk management | `risk/` | `StopLossExit`, `TrailingStopExit`, `TimeStop`, `ProfitTargetExit`, `ReentryCooldown`, `ConsecutiveLossCooldown`, `DailyLossLimit`, `PortfolioDrawdownLimit`, `TradingWindow`, `MaxDrawdownRiskModel`, `MaxGrossExposureRiskModel`, `CompositeRiskModel` |
 | Execution | `execution/` | `ExecutionModel(sink=PortfolioSink())`, `ExecutionModel(sink=BrokerSink(broker))` |
 
@@ -39,7 +39,7 @@ An `Algorithm` is a dataclass holding exactly one of each stage (plus a list of 
 from prophitai_algo_trading import Algorithm
 from prophitai_algo_trading.alphas import MomentumAlpha, BreakoutAlpha
 from prophitai_algo_trading.portfolio_construction import (
-    MagnitudeWeightedLongShortPCM, MultiAlphaBlendPCM,
+    MagnitudeWeightedLongShortConstructor, MultiAlphaBlender,
 )
 from prophitai_algo_trading.risk import (
     CompositeRiskModel, MaxDrawdownRiskModel, MaxGrossExposureRiskModel,
@@ -48,9 +48,9 @@ from prophitai_algo_trading.execution import ExecutionModel, PortfolioSink
 
 algo = Algorithm(
     alphas=[MomentumAlpha(), BreakoutAlpha()],
-    portfolio_construction=MultiAlphaBlendPCM(
+    portfolio_construction=MultiAlphaBlender(
         weights={"momentum": 0.5, "breakout": 0.5},
-        inner=MagnitudeWeightedLongShortPCM(gross_exposure=1.5),
+        inner=MagnitudeWeightedLongShortConstructor(gross_exposure=1.5),
     ),
     risk_management=CompositeRiskModel([
         MaxDrawdownRiskModel(max_drawdown_pct=0.15),
@@ -118,7 +118,7 @@ src/prophitai_algo_trading/
 
 1. **`core.md`** — `Insight`, `PortfolioTarget`, `AlgorithmContext`, the protocols.
 2. **`alphas.md`** — pick a base (`PerSymbolAlpha` / `CrossSectionalAlpha` / `PairAlpha`) and implement `compute_score`.
-3. **`portfolio_construction.md`** — pick a PCM or compose `MultiAlphaBlendPCM` over one.
+3. **`portfolio_construction.md`** — pick a PCM or compose `MultiAlphaBlender` over one.
 4. **`risk.md`** — stack rules in `CompositeRiskModel`.
 5. **`execution.md`** — wire `ExecutionModel(sink=PortfolioSink())` for backtest.
 6. **`engines.md`** — hand the algorithm to `Backtest.run(data)`.

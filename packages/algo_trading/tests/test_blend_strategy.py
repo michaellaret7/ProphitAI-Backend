@@ -44,8 +44,8 @@ from prophitai_algo_trading.alpha_signals.intraday import (
     SessionVWAPDeviationAlpha,
 )
 from prophitai_algo_trading.construction import (
-    MagnitudeWeightedLongShortPCM,
-    MultiAlphaBlendPCM,
+    MagnitudeWeightedLongShortConstructor,
+    MultiAlphaBlender,
 )
 from prophitai_data.db.models.market import Ticker
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
@@ -181,14 +181,14 @@ def _load_panel(tickers: list[str]):
 
 
 def _build_algo() -> VectorAlgorithm:
-    pcm = MultiAlphaBlendPCM(
+    pcm = MultiAlphaBlender(
         weights={
             "opening_hour_momentum":  0.35,
             "vwap_deviation":         0.30,
             "hourly_rsi":             0.20,
             "anchored_vwap_breakout": 0.15,
         },
-        inner=MagnitudeWeightedLongShortPCM(
+        inner=MagnitudeWeightedLongShortConstructor(
             gross_exposure=1.5,
             per_position_cap=0.10,
             quantile=0.20,

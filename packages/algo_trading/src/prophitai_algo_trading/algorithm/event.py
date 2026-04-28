@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from prophitai_algo_trading.core.protocols import (
     AlphaModel,
     ExecutionModel,
-    PortfolioConstructionModel,
+    PortfolioConstructor,
     RiskManagementModel,
 )
 
@@ -29,7 +29,7 @@ from prophitai_algo_trading.core.protocols import (
 #     ================================
 
 def _require_unique_alpha_names(alphas: list[AlphaModel]) -> None:
-    """Raise if two alphas share a ``name`` — multi-alpha PCMs key on it."""
+    """Raise if two alphas share a ``name`` — multi-alpha blenders key on it."""
     seen: set[str] = set()
     duplicates: list[str] = []
 
@@ -44,7 +44,7 @@ def _require_unique_alpha_names(alphas: list[AlphaModel]) -> None:
         raise ValueError(
             f"Duplicate AlphaModel names: {sorted(set(duplicates))}. "
             "Each alpha must have a unique ``name`` — multi-alpha "
-            "PortfolioConstructionModels partition insights by alpha name."
+            "blenders partition insights by alpha name."
         )
 
 
@@ -60,9 +60,10 @@ class Algorithm:
         alphas: One or more AlphaModels. Insights from all alphas are
             concatenated before being passed to the PCM. Each alpha must
             have a unique ``name``.
-        portfolio_construction: Single PCM that owns weighting + rebalance
-            cadence. Multi-alpha blending happens inside the PCM (e.g.
-            ``MultiAlphaBlendPCM``).
+        portfolio_construction: Single PortfolioConstructor that owns
+            weighting + rebalance cadence. Multi-alpha blending happens
+            outside the constructor via a ``SignalBlender`` wrapper
+            (e.g. ``MultiAlphaBlender``) which delegates to a constructor.
         risk_management: Single RiskManagementModel. Use
             ``CompositeRiskModel`` to stack multiple rules.
         execution: ExecutionModel. ``ExecutionModel(sink=PortfolioSink())``
@@ -74,7 +75,7 @@ class Algorithm:
     """
 
     alphas: list[AlphaModel]
-    portfolio_construction: PortfolioConstructionModel
+    portfolio_construction: PortfolioConstructor
     risk_management: RiskManagementModel
     execution: ExecutionModel
 

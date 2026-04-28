@@ -2,7 +2,7 @@
 
 Three types define the contracts between pipeline stages:
 
-    AlphaModel  ─▶  list[Insight]  ─▶  PortfolioConstructionModel
+    AlphaModel  ─▶  list[Insight]  ─▶  PortfolioConstructor
                                        │
                                        ▼
                                   list[PortfolioTarget]
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 
 #     ================================
-# --> Alpha → PCM contract
+# --> Alpha → constructor contract
 #     ================================
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class Insight:
 
     An Insight is not a signal in the "position column" sense — it's a
     structured claim about where a symbol is going, with optional magnitude
-    and confidence. The PortfolioConstructionModel blends Insights (possibly
+    and confidence. The PortfolioConstructor blends Insights (possibly
     from multiple alphas) into target weights.
 
     Attributes:

@@ -16,6 +16,9 @@ correlations, top-correlation projections. PR 2 adds lag + cost. PR 3
 adds clustering + FDR + graduation flags.
 """
 
+from prophitai_algo_trading.analytics.alpha_research.analyzers.cadence import (
+    STANDARD_CADENCES,
+)
 from prophitai_algo_trading.analytics.alpha_research.formatters import (
     print_alpha_report,
     print_alpha_research,
@@ -28,14 +31,17 @@ from prophitai_algo_trading.analytics.alpha_research.models import (
 from prophitai_algo_trading.analytics.alpha_research.runner import (
     analyze_alpha,
     analyze_alphas,
+    cadence_sweep_for_alpha,
 )
 
 __all__ = [
     "AlphaReport",
     "AnalyticsConfig",
     "CrossAlphaReport",
+    "STANDARD_CADENCES",
     "analyze_alpha",
     "analyze_alphas",
+    "cadence_sweep_for_alpha",
     "print_alpha_report",
     "print_alpha_research",
 ]

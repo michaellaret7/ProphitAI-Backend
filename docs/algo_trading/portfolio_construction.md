@@ -1,6 +1,6 @@
 # Portfolio Construction
 
-A `PortfolioConstructionModel` (PCM) turns a list of `Insight`s into a list of `PortfolioTarget`s.  This is the step that:
+A `PortfolioConstructor` (PCM) turns a list of `Insight`s into a list of `PortfolioTarget`s.  This is the step that:
 
 - Decides **which symbols** make the book.
 - Decides **how much capital** each position gets.
@@ -12,7 +12,7 @@ Four built-in PCMs cover the common patterns; they all live in `portfolio_constr
 ## Protocol
 
 ```python
-class PortfolioConstructionModel(Protocol):
+class PortfolioConstructor(Protocol):
     def create_targets(
         self,
         ctx: AlgorithmContext,
@@ -70,12 +70,12 @@ For every currently-invested symbol NOT already in `targets`, append `PortfolioT
 
 ## Built-in PCMs
 
-### `EqualWeightPCM`
+### `EqualWeightConstructor`
 
 Simplest usable PCM.  Ranks insights by `|direction * magnitude|`, picks the top N most confident, splits gross exposure equally among them.  Longs and shorts land in the same N.
 
 ```python
-EqualWeightPCM(
+EqualWeightConstructor(
     max_positions=10,               # cap across both sides
     gross_exposure=1.0,             # total absolute weight
     rebalance_every=None,           # None = every bar (high turnover)
@@ -84,7 +84,7 @@ EqualWeightPCM(
 
 Use for: sanity baselines; alphas whose magnitudes are too noisy to weight by.
 
-### `InsightWeightedPCM`
+### `InsightWeightedConstructor`
 
 Magnitude-proportional sizing with a per-position cap:
 
@@ -94,7 +94,7 @@ weight_i = min(weight_i, per_position_cap)
 ```
 
 ```python
-InsightWeightedPCM(
+InsightWeightedConstructor(
     gross_exposure=1.0,
     per_position_cap=0.10,
     max_positions=None,             # optional truncation
@@ -104,7 +104,7 @@ InsightWeightedPCM(
 
 Reads `Insight.weight` first, falls back to `Insight.magnitude`, then `1.0` — lets an alpha emit explicit per-symbol weight hints when it has them.
 
-### `MagnitudeWeightedLongShortPCM`
+### `MagnitudeWeightedLongShortConstructor`
 
 The workhorse L/S builder.  Decile-cut, dollar-neutral, magnitude-weighted within each side:
 
@@ -116,7 +116,7 @@ The workhorse L/S builder.  Decile-cut, dollar-neutral, magnitude-weighted withi
 6. Cap per-position at `per_position_cap`.
 
 ```python
-MagnitudeWeightedLongShortPCM(
+MagnitudeWeightedLongShortConstructor(
     gross_exposure=2.0,             # 2.0 = 100% long + 100% short
     per_position_cap=0.10,
     quantile=0.10,                  # decile cut; must be in (0, 0.5]
@@ -125,9 +125,9 @@ MagnitudeWeightedLongShortPCM(
 )
 ```
 
-Expects **one insight per symbol** as input — typically wrapped by `MultiAlphaBlendPCM`.
+Expects **one insight per symbol** as input — typically wrapped by `MultiAlphaBlender`.
 
-### `MultiAlphaBlendPCM`
+### `MultiAlphaBlender`
 
 The composite PCM for multi-alpha portfolios.  Pipeline:
 
@@ -138,14 +138,14 @@ The composite PCM for multi-alpha portfolios.  Pipeline:
 5. Delegate to an **inner PCM** for the actual target construction.
 
 ```python
-MultiAlphaBlendPCM(
+MultiAlphaBlender(
     weights={
         "momentum":   0.40,
         "breakout":   0.20,
         "reversal":   0.20,
         "low_vol":    0.20,
     },
-    inner=MagnitudeWeightedLongShortPCM(
+    inner=MagnitudeWeightedLongShortConstructor(
         gross_exposure=1.5,
         per_position_cap=0.08,
         quantile=0.15,
@@ -156,7 +156,7 @@ MultiAlphaBlendPCM(
 
 Weights are **not** re-normalized — negative weights flip a signal's contribution; summing to ≠ 1 tilts the blended magnitude scale.
 
-`inner` is any `PortfolioConstructionModel` — blend into `EqualWeightPCM`, `InsightWeightedPCM`, or a custom one.
+`inner` is any `PortfolioConstructor` — blend into `EqualWeightConstructor`, `InsightWeightedConstructor`, or a custom one.
 
 ## Composition patterns
 
@@ -165,7 +165,7 @@ Weights are **not** re-normalized — negative weights flip a signal's contribut
 ```python
 Algorithm(
     alphas=[MomentumAlpha()],
-    portfolio_construction=MagnitudeWeightedLongShortPCM(
+    portfolio_construction=MagnitudeWeightedLongShortConstructor(
         gross_exposure=1.5,
         per_position_cap=0.10,
         rebalance_every=timedelta(days=7),
@@ -179,9 +179,9 @@ Algorithm(
 ```python
 Algorithm(
     alphas=[MomentumAlpha(), BreakoutAlpha(), LowVolAlpha()],
-    portfolio_construction=MultiAlphaBlendPCM(
+    portfolio_construction=MultiAlphaBlender(
         weights={"momentum": 0.5, "breakout": 0.3, "low_vol": 0.2},
-        inner=MagnitudeWeightedLongShortPCM(gross_exposure=1.5),
+        inner=MagnitudeWeightedLongShortConstructor(gross_exposure=1.5),
     ),
     ...
 )
@@ -192,7 +192,7 @@ Algorithm(
 ```python
 Algorithm(
     alphas=[MomentumAlpha()],
-    portfolio_construction=InsightWeightedPCM(
+    portfolio_construction=InsightWeightedConstructor(
         gross_exposure=1.0,
         per_position_cap=0.15,
         max_positions=20,
