@@ -21,38 +21,76 @@ from prophitai_algo_trading import (
     run_alpha_isolation,
 )
 from prophitai_algo_trading.alpha_signals import (
+    ADXAlpha,
+    AccelerationAlpha,
+    AccumulationDistributionAlpha,
+    AmihudIlliquidityAlpha,
+    BetaToMarketAlpha,
     BreakoutAlpha,
+    ChaikinMoneyFlowAlpha,
+    CloseLocationAlpha,
+    ConnorsRSIAlpha,
+    DispersionReversalAlpha,
+    FiftyTwoWeekHighAlpha,
+    GapFadeAlpha,
+    GarmanKlassVolAlpha,
+    IdiosyncraticVolAlpha,
+    IntradayReversalAlpha,
+    KaufmanEfficiencyAlpha,
+    LotteryAlpha,
     LowVolAlpha,
     MomentumAlpha,
+    MovingAverageRibbonAlpha,
+    NarrowRange7Alpha,
+    OBVSlopeAlpha,
+    OvernightDriftAlpha,
+    RSIAlpha,
+    RangeCompressionAlpha,
     ShortTermReversalAlpha,
+    SkewnessAlpha,
+    StochasticOscillatorAlpha,
     TrendVolumeAlpha,
+    TurnOfMonthAlpha,
+    VolOfVolAlpha,
+    VolumeShockAlpha,
 )
 from prophitai_algo_trading.construction import (
     MagnitudeWeightedLongShortPCM,
 )
+from prophitai_data.db.models.market import Ticker
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
+from prophitai_data.session.decorators import with_session
 
 
 #     ================================
 # --> Universe + window
 #     ================================
 
-UNIVERSE: list[str] = [
-    "AAPL", "MSFT", "GOOGL", "META", "NVDA", "AMZN",
-    "ORCL", "CRM", "ADBE", "NFLX", "TSLA", "AVGO",
-    "JPM", "BAC", "WFC", "GS", "MS", "C",
-    "JNJ", "UNH", "LLY", "PFE", "ABBV", "MRK",
-    "HD", "LOW", "NKE", "MCD", "SBUX",
-    "WMT", "COST", "TGT", "PG", "KO", "PEP",
-    "XOM", "CVX", "COP", "SLB", "EOG",
-    "CAT", "GE", "BA", "HON", "UPS", "DE",
-    "T", "VZ", "DIS", "CMCSA",
-]
+UNIVERSE_SIZE = 500
 
 BENCHMARK_TICKER = "SPY"
 
 START = "2021-01-01"
 END = "2025-12-31"
+
+
+@with_session('market')
+def _load_universe(size: int = UNIVERSE_SIZE, session=None) -> list[str]:
+    """Top ``size`` non-ETF tickers by market cap from the market_data DB."""
+    rows = (
+        session.query(Ticker.ticker)
+        .filter(Ticker.is_etf.is_(False))
+        .filter(Ticker.is_actively_trading.is_(True))
+        .filter(Ticker.market_cap.isnot(None))
+        .order_by(Ticker.market_cap.desc())
+        .limit(size)
+        .all()
+    )
+
+    return [row[0] for row in rows]
+
+
+UNIVERSE: list[str] = _load_universe()
 
 
 #     ================================
@@ -135,11 +173,44 @@ def main() -> None:
     benchmark = _load_benchmark()
 
     alphas = [
+        # Trend / momentum
         MomentumAlpha(),
-        ShortTermReversalAlpha(),
         BreakoutAlpha(),
-        LowVolAlpha(),
         TrendVolumeAlpha(),
+        MovingAverageRibbonAlpha(),
+        AccelerationAlpha(),
+        ADXAlpha(),
+        KaufmanEfficiencyAlpha(),
+        FiftyTwoWeekHighAlpha(),
+        # Mean reversion / oscillators
+        ShortTermReversalAlpha(),
+        RSIAlpha(),
+        DispersionReversalAlpha(),
+        GapFadeAlpha(),
+        StochasticOscillatorAlpha(),
+        ConnorsRSIAlpha(),
+        IntradayReversalAlpha(),
+        # Volatility / squeeze / risk
+        LowVolAlpha(),
+        RangeCompressionAlpha(),
+        GarmanKlassVolAlpha(),
+        LotteryAlpha(),
+        VolOfVolAlpha(),
+        SkewnessAlpha(),
+        IdiosyncraticVolAlpha(),
+        BetaToMarketAlpha(),
+        # Volume / flow
+        VolumeShockAlpha(),
+        OBVSlopeAlpha(),
+        ChaikinMoneyFlowAlpha(),
+        AccumulationDistributionAlpha(),
+        AmihudIlliquidityAlpha(),
+        # Range / candle / overnight
+        CloseLocationAlpha(),
+        NarrowRange7Alpha(),
+        OvernightDriftAlpha(),
+        # Calendar
+        TurnOfMonthAlpha(),
     ]
 
     print(f"\nIsolating {len(alphas)} alphas through identical PCM ...")
