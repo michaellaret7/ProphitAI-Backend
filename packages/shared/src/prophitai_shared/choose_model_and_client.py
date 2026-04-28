@@ -65,6 +65,9 @@ MODEL_ALIASES = {
         "fireworks": "accounts/fireworks/models/deepseek-v3p2",
         "together": "deepseek-ai/DeepSeek-V3.2-Exp",
     },
+    "deepseek-v4-pro": {
+        "together": "deepseek-ai/DeepSeek-V4-Pro",
+    },
     "Qwen3.6-Plus": {
         "fireworks": "accounts/fireworks/models/qwen3p6-plus",
     },

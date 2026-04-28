@@ -1,18 +1,25 @@
-"""Backtest results, metric calculators, and alpha-level diagnostics.
+"""Backtest results, metric calculators, and the alpha-research subsystem.
 
 ``BacktestResult`` is the canonical return type for ``Backtest.run``.
 ``calculate_metrics`` computes the performance metrics dict (total
 return, Sharpe, drawdown, win rate, profit factor, ...) from an equity
 curve + trades DataFrame.
 
-``run_alpha_isolation`` runs each alpha alone through a fresh PCM to
-attribute per-alpha contribution. ``AlphaIsolationReport`` is its
-result type.
+The alpha-research subsystem (``analyze_alpha`` / ``analyze_alphas``)
+runs each alpha through the vector engine and produces deep per-alpha
+analytics — IC + IC decay, sub-period stability, return correlations,
+and (in later PRs) lag sensitivity, cost breakeven, clustering, FDR
+correction, and graduation flags.
 """
 
-from prophitai_algo_trading.analytics.alpha_isolation import (
-    AlphaIsolationReport,
-    run_alpha_isolation,
+from prophitai_algo_trading.analytics.alpha_research import (
+    AlphaReport,
+    AnalyticsConfig,
+    CrossAlphaReport,
+    analyze_alpha,
+    analyze_alphas,
+    print_alpha_report,
+    print_alpha_research,
 )
 from prophitai_algo_trading.analytics.metrics import (
     BacktestResult,
@@ -20,8 +27,15 @@ from prophitai_algo_trading.analytics.metrics import (
 )
 
 __all__ = [
-    "AlphaIsolationReport",
+    # Backtest result + metrics
     "BacktestResult",
     "calculate_metrics",
-    "run_alpha_isolation",
+    # Alpha-research subsystem
+    "AlphaReport",
+    "AnalyticsConfig",
+    "CrossAlphaReport",
+    "analyze_alpha",
+    "analyze_alphas",
+    "print_alpha_report",
+    "print_alpha_research",
 ]

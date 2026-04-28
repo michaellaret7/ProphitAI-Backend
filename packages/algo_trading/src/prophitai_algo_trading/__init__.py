@@ -38,10 +38,15 @@ Quick start::
 
 from prophitai_algo_trading.algorithm import Algorithm, VectorAlgorithm
 from prophitai_algo_trading.analytics import (
-    AlphaIsolationReport,
+    AlphaReport,
+    AnalyticsConfig,
     BacktestResult,
+    CrossAlphaReport,
+    analyze_alpha,
+    analyze_alphas,
     calculate_metrics,
-    run_alpha_isolation,
+    print_alpha_report,
+    print_alpha_research,
 )
 from prophitai_algo_trading.brokers import Alpaca
 from prophitai_algo_trading.core import (
@@ -96,10 +101,15 @@ __all__ = [
     "LiveRunner",
     "VectorBacktest",
     # Analytics
-    "AlphaIsolationReport",
+    "AlphaReport",
+    "AnalyticsConfig",
     "BacktestResult",
+    "CrossAlphaReport",
+    "analyze_alpha",
+    "analyze_alphas",
     "calculate_metrics",
-    "run_alpha_isolation",
+    "print_alpha_report",
+    "print_alpha_research",
     # Portfolio state
     "Portfolio",
     "Position",

@@ -1,12 +1,14 @@
-"""Smoke test — run_alpha_isolation across every pre-built alpha.
+"""Smoke test — alpha-research sweep across every pre-built alpha.
 
-Loops every pre-built alpha alone through the same PCM and prints a
-comparison table. ~70ms per alpha — a 5-alpha sweep finishes in
-under half a second on the same data the multi-alpha smoke test uses.
+Loops every pre-built alpha through ``analyze_alphas``, sharing one PCM
+factory and one ``AnalyticsConfig``. Prints the wide flat summary
+(IC + IC decay + sub-period stability + backtest metrics + correlation
+projections) followed by the full cross-alpha return-correlation
+matrix.
 
 Run:
     PYTHONIOENCODING=utf-8 /c/Dev/ProphitAI/.venv/Scripts/python.exe \\
-        packages/algo_trading/tests/test_alpha_isolation.py
+        packages/algo_trading/tests/test_alpha_research.py
 """
 
 from __future__ import annotations
@@ -17,8 +19,10 @@ from datetime import timedelta
 import pandas as pd
 
 from prophitai_algo_trading import (
+    AnalyticsConfig,
+    analyze_alphas,
     panel_from_per_ticker,
-    run_alpha_isolation,
+    print_alpha_research,
 )
 from prophitai_algo_trading.alpha_signals import (
     ADXAlpha,
@@ -167,7 +171,7 @@ def _build_pcm():
 #     ================================
 
 def main() -> None:
-    print("\n=== Alpha isolation sweep ===")
+    print("\n=== Alpha-research sweep ===")
 
     panel = _load_panel()
     benchmark = _load_benchmark()
@@ -213,16 +217,20 @@ def main() -> None:
         TurnOfMonthAlpha(),
     ]
 
-    print(f"\nIsolating {len(alphas)} alphas through identical PCM ...")
+    config = AnalyticsConfig(
+        initial_capital=1_000_000.0,
+        cost_per_turnover=0.0001,
+    )
+
+    print(f"\nResearching {len(alphas)} alphas through identical PCM ...")
 
     t0 = time.perf_counter()
 
-    report = run_alpha_isolation(
+    reports, cross = analyze_alphas(
         alphas=alphas,
-        pcm_factory=_build_pcm,
         panel=panel,
-        initial_capital=1_000_000.0,
-        cost_per_turnover=0.0001,
+        pcm_factory=_build_pcm,
+        config=config,
         benchmark=benchmark if not benchmark.empty else None,
     )
 
@@ -230,7 +238,7 @@ def main() -> None:
 
     print(f"\nSweep complete in {elapsed * 1000:.1f} ms total")
 
-    report.print_summary()
+    print_alpha_research(reports, cross)
 
 
 if __name__ == "__main__":
