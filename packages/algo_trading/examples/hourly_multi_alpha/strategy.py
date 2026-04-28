@@ -1,8 +1,12 @@
-"""Strategy factories for the hourly multi-alpha example."""
+"""Hourly multi-alpha strategy spec.
+
+Reading order: alphas (what signals fire) -> portfolio construction (how we
+size them) -> risk (what blows positions out early) -> algorithm builders
+(one per runtime mode).
+"""
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
 
 from prophitai_algo_trading import Algorithm, VectorAlgorithm
@@ -31,120 +35,137 @@ from prophitai_algo_trading.risk import (
     TrailingStopExit,
 )
 
-from custom_alphas import (
+from alphas import (
     EarlySessionRangeFadeAlpha,
     IntradayTrendPersistenceAlpha,
     OpeningGapContinuationAlpha,
     RelativeVolumeReversalAlpha,
 )
-from custom_risk import IntradayDrawdownKillSwitch, PositionAgeExit
+from config import Config
+from risk import IntradayDrawdownKillSwitch, PositionAgeExit
 
 
-INITIAL_CAPITAL = 1_000_000.0
-GROSS_EXPOSURE = 1.5
-PER_POSITION_CAP = 0.05
-QUANTILE = 0.20
-MIN_ABS_SCORE = 0.05
-REBALANCE_EVERY = timedelta(weeks=1)
-COST_PER_TURNOVER = 0.0001
-MIN_CHANGE_PCT = 0.005
+# ================================
+# --> Alphas
+# ================================
 
-
-def build_alphas() -> list[Any]:
-    """Return fresh alpha instances for this strategy."""
+def _alphas() -> list[Any]:
+    """Fresh alpha instances, grouped by intent."""
     return [
+        # Time-of-day
         OpeningHourMomentumAlpha(),
         LunchReversalAlpha(),
         CloseDriftAlpha(),
-        MicroMomentumAlpha(),
-        HourlyRSIAlpha(),
-        HourlyBollingerAlpha(),
-        HourlyATRBreakoutAlpha(),
-        VolumeSpikeContinuationAlpha(),
-        CrossSectionalHourlyReversalAlpha(),
-        CrossSectionalHourlyVolumeAlpha(),
         OpeningGapContinuationAlpha(),
         EarlySessionRangeFadeAlpha(),
+
+        # Trend / momentum
+        MicroMomentumAlpha(),
         IntradayTrendPersistenceAlpha(),
+
+        # Mean reversion
+        HourlyRSIAlpha(),
+        HourlyBollingerAlpha(),
+
+        # Breakout / volume
+        HourlyATRBreakoutAlpha(),
+        VolumeSpikeContinuationAlpha(),
         RelativeVolumeReversalAlpha(),
+
+        # Cross-sectional
+        CrossSectionalHourlyReversalAlpha(),
+        CrossSectionalHourlyVolumeAlpha(),
     ]
 
 
-def build_alpha_weights(alphas: list[Any]) -> dict[str, float]:
-    """Equal-weight every alpha until research justifies reweighting."""
-    weight = 1.0 / len(alphas)
+# ================================
+# --> Portfolio construction
+# ================================
 
-    return {alpha.name: weight for alpha in alphas}
-
-
-def build_single_alpha_pcm() -> MagnitudeWeightedLongShortConstructor:
-    """Fresh constructor for isolated alpha research runs."""
+def _pcm(cfg: Config) -> MagnitudeWeightedLongShortConstructor:
     return MagnitudeWeightedLongShortConstructor(
-        gross_exposure=GROSS_EXPOSURE,
-        per_position_cap=PER_POSITION_CAP,
-        quantile=QUANTILE,
-        min_abs_score=MIN_ABS_SCORE,
-        rebalance_every=REBALANCE_EVERY,
+        gross_exposure=cfg.gross_exposure,
+        per_position_cap=cfg.per_position_cap,
+        quantile=cfg.quantile,
+        min_abs_score=cfg.min_abs_score,
+        rebalance_every=cfg.rebalance_every,
     )
 
 
-def build_portfolio_construction(alphas: list[Any]) -> MultiAlphaBlender:
-    """Weekly-rebalanced blended long/short portfolio constructor."""
-    return MultiAlphaBlender(
-        weights=build_alpha_weights(alphas),
-        inner=build_single_alpha_pcm(),
-    )
+def _blender(alphas: list[Any], cfg: Config) -> MultiAlphaBlender:
+    weight = 1.0 / len(alphas)
+    weights = {alpha.name: weight for alpha in alphas}
+
+    return MultiAlphaBlender(weights=weights, inner=_pcm(cfg))
 
 
-def build_risk_model() -> CompositeRiskModel:
-    """Event/live risk stack. Risk still runs on every hourly bar."""
+# ================================
+# --> Risk
+# ================================
+
+def _risk(cfg: Config) -> CompositeRiskModel:
     return CompositeRiskModel([
-        IntradayDrawdownKillSwitch(loss_pct=0.03),
-        PortfolioDrawdownLimit(dd_pct=0.15),
-        StopLossExit(pct=0.05),
-        TrailingStopExit(pct=0.08),
-        PositionAgeExit(max_bars=70, max_duration=timedelta(days=14)),
-        MaxGrossExposureRiskModel(max_gross=GROSS_EXPOSURE),
+        IntradayDrawdownKillSwitch(loss_pct=cfg.intraday_dd_kill),
+        PortfolioDrawdownLimit(dd_pct=cfg.portfolio_dd_limit),
+        StopLossExit(pct=cfg.stop_loss_pct),
+        TrailingStopExit(pct=cfg.trailing_stop_pct),
+        PositionAgeExit(
+            max_bars=cfg.max_position_bars,
+            max_duration=cfg.max_position_duration,
+        ),
+        MaxGrossExposureRiskModel(max_gross=cfg.gross_exposure),
     ])
 
 
-def build_vector_algorithm() -> VectorAlgorithm:
-    """Fast vectorized strategy for research and parameter sweeps."""
-    alphas = build_alphas()
+# ================================
+# --> Algorithm builders
+# ================================
+
+
+
+
+def build_research_pcm(cfg: Config = Config()) -> MagnitudeWeightedLongShortConstructor:
+    """Single-alpha PCM factory for isolated alpha research."""
+    return _pcm(cfg)
+
+
+def build_vector_algorithm(cfg: Config = Config()) -> VectorAlgorithm:
+    """Fast vectorized algorithm for sweeps and research."""
+    alphas = _alphas()
 
     return VectorAlgorithm(
         alphas=alphas,
-        pcm=build_portfolio_construction(alphas),
-        initial_capital=INITIAL_CAPITAL,
-        cost_per_turnover=COST_PER_TURNOVER,
+        pcm=_blender(alphas, cfg),
+        initial_capital=cfg.initial_capital,
+        cost_per_turnover=cfg.cost_per_turnover,
     )
 
 
-def build_event_algorithm() -> Algorithm:
-    """Production-realistic event strategy using an in-memory portfolio sink."""
-    alphas = build_alphas()
+def build_event_algorithm(cfg: Config = Config()) -> Algorithm:
+    """Production-realistic event algorithm with in-memory portfolio sink."""
+    alphas = _alphas()
 
     return Algorithm(
         alphas=alphas,
-        portfolio_construction=build_portfolio_construction(alphas),
-        risk_management=build_risk_model(),
+        portfolio_construction=_blender(alphas, cfg),
+        risk_management=_risk(cfg),
         execution=ExecutionModel(
             sink=PortfolioSink(),
-            min_change_pct=MIN_CHANGE_PCT,
+            min_change_pct=cfg.min_change_pct,
         ),
     )
 
 
-def build_live_algorithm(broker) -> Algorithm:
-    """Live/paper strategy using broker-backed execution."""
-    alphas = build_alphas()
+def build_live_algorithm(broker, cfg: Config = Config()) -> Algorithm:
+    """Live/paper algorithm using broker-backed execution."""
+    alphas = _alphas()
 
     return Algorithm(
         alphas=alphas,
-        portfolio_construction=build_portfolio_construction(alphas),
-        risk_management=build_risk_model(),
+        portfolio_construction=_blender(alphas, cfg),
+        risk_management=_risk(cfg),
         execution=ExecutionModel(
             sink=BrokerSink(broker),
-            min_change_pct=MIN_CHANGE_PCT,
+            min_change_pct=cfg.min_change_pct,
         ),
     )

@@ -21,7 +21,8 @@ sys.path.insert(0, str(PKG_SRC))
 
 from prophitai_algo_trading import Alpaca, CostModel, LiveRunner
 
-from data import END, START, load_hourly_data, load_universe
+from config import Config
+from data import load_hourly_data, load_universe
 from strategy import build_live_algorithm
 
 
@@ -44,19 +45,20 @@ def parse_args() -> argparse.Namespace:
 
 async def main_async() -> None:
     args = parse_args()
+    cfg = Config(universe_size=args.universe_size)
 
     mode = "REAL" if args.real else "PAPER"
     print(f"\n=== Hourly multi-alpha live runner ({mode}) ===")
 
-    tickers = load_universe(args.universe_size)
-    warmup_history = load_hourly_data(tickers, start=START, end=END)
+    tickers = load_universe(cfg)
+    warmup_history = load_hourly_data(tickers, cfg)
     broker = Alpaca(paper=not args.real)
-    algo = build_live_algorithm(broker)
+    algo = build_live_algorithm(broker, cfg)
     runner = LiveRunner(
         algorithm=algo,
         broker=broker,
         tickers=tickers,
-        cost_model=CostModel(ptc=0.0001, ftc=1.0),
+        cost_model=CostModel(ptc=cfg.cost_per_turnover, ftc=1.0),
     )
 
     await runner.warmup(warmup_history)

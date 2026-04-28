@@ -1,4 +1,4 @@
-"""Data helpers for the hourly multi-alpha example."""
+"""Data loaders for the hourly multi-alpha strategy."""
 
 from __future__ import annotations
 
@@ -11,29 +11,12 @@ from prophitai_data.db.models.market import Ticker
 from prophitai_data.repositories.price import fetch_bulk_ohlcv_data_for_tickers
 from prophitai_data.session.decorators import with_session
 
-
-UNIVERSE_SIZE = 250
-START = "2024-01-01"
-END = "2026-01-01"
-FREQUENCY = "hourly"
-BENCHMARK_TICKER = "SPY"
+from config import Config
 
 
-@with_session("market")
-def load_universe(size: int = UNIVERSE_SIZE, session=None) -> list[str]:
-    """Top active non-ETF US stocks by market cap."""
-    rows = (
-        session.query(Ticker.ticker)
-        .filter(Ticker.is_etf.is_(False))
-        .filter(Ticker.is_actively_trading.is_(True))
-        .filter(Ticker.market_cap.isnot(None))
-        .order_by(Ticker.market_cap.desc())
-        .limit(size)
-        .all()
-    )
-
-    return [row[0] for row in rows]
-
+# ================================
+# --> Helper funcs
+# ================================
 
 def _clean_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
@@ -43,15 +26,46 @@ def _clean_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
     return out[~out.index.duplicated(keep="last")]
 
 
-def load_hourly_data(
-    tickers: list[str],
-    start: str = START,
-    end: str = END,
-) -> dict[str, pd.DataFrame]:
+def _fetch_benchmark_close(cfg: Config) -> pd.Series:
+    bulk = fetch_bulk_ohlcv_data_for_tickers(
+        [cfg.benchmark_ticker],
+        cfg.start,
+        cfg.end,
+        cfg.frequency,
+    )
+    df = bulk.get(cfg.benchmark_ticker)
+
+    if df is None or df.empty:
+        return pd.Series(dtype=float)
+
+    return _clean_ohlcv(df)["close"]
+
+
+# ================================
+# --> Loaders
+# ================================
+
+@with_session("market")
+def load_universe(cfg: Config, session=None) -> list[str]:
+    """Top active non-ETF US stocks by market cap."""
+    rows = (
+        session.query(Ticker.ticker)
+        .filter(Ticker.is_etf.is_(False))
+        .filter(Ticker.is_actively_trading.is_(True))
+        .filter(Ticker.market_cap.isnot(None))
+        .order_by(Ticker.market_cap.desc())
+        .limit(cfg.universe_size)
+        .all()
+    )
+
+    return [row[0] for row in rows]
+
+
+def load_hourly_data(tickers: list[str], cfg: Config) -> dict[str, pd.DataFrame]:
     """Load hourly OHLCV keyed by ticker."""
-    print(f"\nFetching hourly OHLCV for {len(tickers)} tickers {start} -> {end}")
+    print(f"\nFetching hourly OHLCV for {len(tickers)} tickers {cfg.start} -> {cfg.end}")
     t0 = time.perf_counter()
-    bulk = fetch_bulk_ohlcv_data_for_tickers(tickers, start, end, FREQUENCY)
+    bulk = fetch_bulk_ohlcv_data_for_tickers(tickers, cfg.start, cfg.end, cfg.frequency)
     print(f"Fetched in {time.perf_counter() - t0:.1f}s")
 
     ready: dict[str, pd.DataFrame] = {}
@@ -69,13 +83,9 @@ def load_hourly_data(
     return ready
 
 
-def load_hourly_panel(
-    tickers: list[str],
-    start: str = START,
-    end: str = END,
-):
+def load_hourly_panel(tickers: list[str], cfg: Config):
     """Load hourly OHLCV and convert to a vectorized PricePanel."""
-    data = load_hourly_data(tickers, start=start, end=end)
+    data = load_hourly_data(tickers, cfg)
     panel = panel_from_per_ticker(data)
 
     print(
@@ -86,31 +96,16 @@ def load_hourly_panel(
     return panel
 
 
-def load_benchmark_returns(
-    ticker: str = BENCHMARK_TICKER,
-    start: str = START,
-    end: str = END,
-) -> pd.Series:
-    """Hourly benchmark returns for simple comparison prints."""
-    bulk = fetch_bulk_ohlcv_data_for_tickers([ticker], start, end, FREQUENCY)
-    df = bulk.get(ticker)
-
-    if df is None or df.empty:
-        return pd.Series(dtype=float)
-
-    return _clean_ohlcv(df)["close"].pct_change().dropna()
-
-
-def load_benchmark_close(
-    ticker: str = BENCHMARK_TICKER,
-    start: str = START,
-    end: str = END,
-) -> pd.Series:
+def load_benchmark_close(cfg: Config) -> pd.Series:
     """Hourly benchmark close series for analytics metrics."""
-    bulk = fetch_bulk_ohlcv_data_for_tickers([ticker], start, end, FREQUENCY)
-    df = bulk.get(ticker)
+    return _fetch_benchmark_close(cfg)
 
-    if df is None or df.empty:
-        return pd.Series(dtype=float)
 
-    return _clean_ohlcv(df)["close"]
+def load_benchmark_returns(cfg: Config) -> pd.Series:
+    """Hourly benchmark returns for simple comparison prints."""
+    close = _fetch_benchmark_close(cfg)
+
+    if close.empty:
+        return close
+
+    return close.pct_change().dropna()
