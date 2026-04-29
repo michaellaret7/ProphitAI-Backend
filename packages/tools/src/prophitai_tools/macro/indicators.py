@@ -38,6 +38,17 @@ INDICATOR_NAMES = [
     "unemploymentRate",
 ]
 
+CATEGORY_INDICATORS: dict[str, list[str]] = {
+    "price_indices": ["CPI", "inflationRate"],
+    "economic_output": ["GDP", "realGDP", "nominalPotentialGDP", "realGDPPerCapita"],
+    "employment": ["unemploymentRate", "totalNonfarmPayroll", "initialClaims"],
+    "consumer": ["consumerSentiment", "retailSales", "totalVehicleSales"],
+    "production": ["industrialProductionTotalIndex", "durableGoods"],
+    "monetary": ["federalFunds", "retailMoneyFunds"],
+}
+
+CATEGORY_NAMES = list(CATEGORY_INDICATORS.keys())
+
 
 # ================================
 # --> Tools
@@ -50,7 +61,8 @@ def macro_indicators(
         Schema({
             "type": "array",
             "description": (
-                "Indicator names to fetch. If omitted, fetches all 16.\n"
+                "Specific indicator names to fetch. Combined (union) with `categories` "
+                "if both are set. If both are omitted, fetches all 16.\n"
                 "Valid: CPI, GDP, consumerSentiment, durableGoods, federalFunds, "
                 "industrialProductionTotalIndex, inflationRate, initialClaims, "
                 "nominalPotentialGDP, realGDP, realGDPPerCapita, retailMoneyFunds, "
@@ -60,40 +72,98 @@ def macro_indicators(
             "default": None,
         }),
     ] = None,
+    categories: Annotated[
+        Optional[list[str]],
+        Schema({
+            "type": "array",
+            "description": (
+                "Indicator categories to fetch in bulk. Each category expands to "
+                "its member indicators. Combined (union) with `indicators` if both "
+                "are set.\n"
+                "Members:\n"
+                "  price_indices    -> CPI, inflationRate\n"
+                "  economic_output  -> GDP, realGDP, nominalPotentialGDP, realGDPPerCapita\n"
+                "  employment       -> unemploymentRate, totalNonfarmPayroll, initialClaims\n"
+                "  consumer         -> consumerSentiment, retailSales, totalVehicleSales\n"
+                "  production       -> industrialProductionTotalIndex, durableGoods\n"
+                "  monetary         -> federalFunds, retailMoneyFunds"
+            ),
+            "items": {"type": "string", "enum": CATEGORY_NAMES},
+            "default": None,
+        }),
+    ] = None,
     years_back: Annotated[int, Param(min_val=1, max_val=10)] = 5,
+    limit: Annotated[Optional[int], Param(min_val=1, max_val=120)] = None,
 ) -> str:
-    """Fetch historical US macroeconomic indicator data.
+    """Fetch historical US macroeconomic indicator data at monthly resolution.
 
 Returns a dictionary keyed by indicator name, each containing a list of
-{date, value} data points sorted chronologically.
+{date, value} data points sorted chronologically (oldest -> newest). Series
+are collapsed to one observation per calendar month (last value of the
+month), so daily series like inflationRate return ~12 points per year
+instead of ~252.
 
-**Available Indicators (16 total):**
-- Price Indices: CPI, inflationRate
-- Economic Output: GDP, realGDP, nominalPotentialGDP, realGDPPerCapita
-- Employment: unemploymentRate, totalNonfarmPayroll, initialClaims
-- Consumer: consumerSentiment, retailSales, totalVehicleSales
-- Production: industrialProductionTotalIndex, durableGoods
-- Monetary: federalFunds, retailMoneyFunds
+**Selecting indicators:**
+- `indicators` — pick exact indicator names.
+- `categories` — pick groups in bulk (e.g. all employment indicators).
+- Both can be combined — the result is the union of the two sets.
+- If both are omitted, all 16 indicators are returned.
+
+**Sizing the response:**
+- `years_back` sets the lookback window (default 5 years).
+- `limit` caps the number of MOST RECENT monthly observations returned
+  per indicator. Use this to keep payloads small when you only need the
+  recent trend — e.g. limit=6 for the last 6 months, limit=12 for the
+  last year. Omit to return the full window.
+
+**Indicator categories (16 total):**
+- price_indices: CPI, inflationRate
+- economic_output: GDP, realGDP, nominalPotentialGDP, realGDPPerCapita
+- employment: unemploymentRate, totalNonfarmPayroll, initialClaims
+- consumer: consumerSentiment, retailSales, totalVehicleSales
+- production: industrialProductionTotalIndex, durableGoods
+- monetary: federalFunds, retailMoneyFunds
 
 **Use Cases:**
-- Inflation analysis: indicators=['CPI', 'inflationRate']
-- Economic growth: indicators=['GDP', 'realGDP']
-- Labor market: indicators=['unemploymentRate', 'totalNonfarmPayroll']
-- Consumer health: indicators=['consumerSentiment', 'retailSales']
-- All indicators: indicators=None (returns all 16, use sparingly)
+- Recent inflation snapshot: indicators=['CPI', 'inflationRate'], limit=6
+- All employment data, last year: categories=['employment'], limit=12
+- Labor market + Fed funds: categories=['employment', 'monetary']
+- Inflation + growth combo: categories=['price_indices', 'economic_output']
+- Bulk pull: indicators=None, categories=None (returns all 16, use sparingly)
 
     Args:
-        indicators: Indicator names to fetch (default: all 16)
+        indicators: Specific indicator names to fetch (default: None)
+        categories: Indicator categories to expand and fetch (default: None)
         years_back: Years of historical data (default: 5)
+        limit: Max number of most-recent monthly observations per indicator
+            (default: None = return full window)
 
     Examples:
         macro_indicators(indicators=['CPI', 'inflationRate'], years_back=3)
+        macro_indicators(categories=['employment'], limit=12)
+        macro_indicators(categories=['monetary'], indicators=['CPI'], limit=6)
         macro_indicators(indicators=['GDP', 'unemploymentRate'], years_back=10)
     """
     try:
-        target_indicators = indicators if indicators is not None else INDICATOR_NAMES
+        # Reason: validate category names before expansion so a typo fails fast
+        if categories is not None:
+            invalid_cats = [c for c in categories if c not in CATEGORY_INDICATORS]
+            if invalid_cats:
+                return error_response(
+                    f"Invalid categories: {invalid_cats}. Valid: {CATEGORY_NAMES}"
+                )
 
-        # Reason: validate indicator names against known list
+        # Reason: union of explicit indicators and category-expanded indicators.
+        # If neither is supplied, default to all 16. Preserve canonical order from
+        # INDICATOR_NAMES so the output is stable regardless of input order.
+        if indicators is None and categories is None:
+            target_indicators = list(INDICATOR_NAMES)
+        else:
+            selected: set[str] = set(indicators or [])
+            for cat in categories or []:
+                selected.update(CATEGORY_INDICATORS[cat])
+            target_indicators = [i for i in INDICATOR_NAMES if i in selected]
+
         invalid = [i for i in target_indicators if i not in INDICATOR_NAMES]
         if invalid:
             return error_response(f"Invalid indicators: {invalid}. Valid: {INDICATOR_NAMES}")
@@ -116,6 +186,15 @@ Returns a dictionary keyed by indicator name, each containing a list of
             df.rename(columns={"value": f"{indicator}_value"}, inplace=True)
             df["date"] = pd.to_datetime(df["date"])
             df = df.sort_values("date")
+
+            # Reason: FMP returns inflationRate as daily; other 15 are monthly/quarterly.
+            # Collapse to one row per calendar month (last observation) to keep payload
+            # consistent across indicators. No-op for monthly/quarterly series.
+            df = df.groupby(df["date"].dt.to_period("M"), as_index=False).last()
+
+            if limit is not None:
+                df = df.tail(limit)
+
             df[f"{indicator}_value"] = df[f"{indicator}_value"].round(3)
             df["date"] = df["date"].dt.strftime("%Y-%m-%d")
 

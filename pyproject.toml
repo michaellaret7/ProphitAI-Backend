@@ -27,6 +27,7 @@ members = [
     "projects/api",
     "projects/fund",
     "projects/substack",
+    "projects/dreamer",
     "infra/jobs",
 ]
 
@@ -41,6 +42,7 @@ prophitai-foundry = { workspace = true }
 prophitai-api = { workspace = true }
 prophitai-fund = { workspace = true }
 prophitai-substack = { workspace = true }
+prophitai-dreamer = { workspace = true }
 prophitai-jobs = { workspace = true }
 
 [tool.ruff]

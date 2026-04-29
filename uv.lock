@@ -17,6 +17,7 @@ members = [
     "prophitai-atlas",
     "prophitai-calculations",
     "prophitai-data",
+    "prophitai-dreamer",
     "prophitai-foundry",
     "prophitai-fund",
     "prophitai-jobs",
@@ -2943,6 +2944,7 @@ dependencies = [
     { name = "pytz" },
     { name = "pyzmq" },
     { name = "requests" },
+    { name = "scipy" },
     { name = "six" },
     { name = "sqlalchemy" },
     { name = "sseclient-py" },
@@ -2976,6 +2978,7 @@ requires-dist = [
     { name = "pytz", specifier = ">=2025.2" },
     { name = "pyzmq" },
     { name = "requests", specifier = ">=2.32.5" },
+    { name = "scipy", specifier = ">=1.16.0" },
     { name = "six", specifier = ">=1.17.0" },
     { name = "sqlalchemy", specifier = ">=2.0.44" },
     { name = "sseclient-py", specifier = ">=1.8.0" },
@@ -3131,6 +3134,29 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0" },
 ]
 provides-extras = ["migrations"]
+
+[[package]]
+name = "prophitai-dreamer"
+version = "0.1.0"
+source = { editable = "projects/dreamer" }
+dependencies = [
+    { name = "prophitai-atlas" },
+    { name = "prophitai-calculations" },
+    { name = "prophitai-data" },
+    { name = "prophitai-shared" },
+    { name = "prophitai-tools" },
+    { name = "python-dotenv" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "prophitai-atlas", editable = "packages/atlas" },
+    { name = "prophitai-calculations", editable = "packages/calculations" },
+    { name = "prophitai-data", editable = "packages/data" },
+    { name = "prophitai-shared", editable = "packages/shared" },
+    { name = "prophitai-tools", editable = "packages/tools" },
+    { name = "python-dotenv" },
+]
 
 [[package]]
 name = "prophitai-foundry"

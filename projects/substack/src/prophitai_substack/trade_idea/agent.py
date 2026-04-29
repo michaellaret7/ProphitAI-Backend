@@ -22,7 +22,7 @@ from prophitai_atlas.tools.base.worker_agent.deploy_general import (
 from prophitai_substack.trade_idea.tool_registry import TRADE_IDEA_TOOLS
 
 
-class TradeIdeaAgent:
+class TradeIdeaAgent(Agent):
     """Generates trade idea articles for the ProphitAI Substack.
 
     Conducts deep research via theory, macro, fundamentals, and market data
@@ -34,7 +34,7 @@ class TradeIdeaAgent:
         "Research and write a compelling trade idea article for the ProphitAI "
         "Substack. Use research tools extensively to find a timely, evidence-backed "
         "trading opportunity, assess the macro context, identify specific instruments "
-        "to express the trade, and produce a complete, publication-ready article."
+        "to express the trade, and produce a complete, publication-ready article. Dont make the trade idea about ai energy infra, that was last weeks entry."
     )
 
     def __init__(
@@ -60,7 +60,7 @@ class TradeIdeaAgent:
         prompt_path = Path(__file__).parent / "system.md"
         system_prompt = prompt_path.read_text(encoding="utf-8").format(date=date)
 
-        self.agent = Agent(
+        super().__init__(
             tools=TRADE_IDEA_TOOLS,
             system_prompt=system_prompt,
             chat_callback=chat_callback,
@@ -72,11 +72,11 @@ class TradeIdeaAgent:
 
         # Reason: deploy_general_worker needs notebook, callback, and user_id
         # pre-bound. The LLM only sees task, tools, plan_task_id, context.
-        self.agent.add_tool(
+        self.add_tool(
             **DEPLOY_GENERAL_WORKER_TOOL,
             function=partial(
                 deploy_general_worker,
-                self.agent.notebook,
+                self.notebook,
                 chat_callback or NoOpChatCallback(),
                 None,
             ),
@@ -94,9 +94,13 @@ class TradeIdeaAgent:
         Returns:
             AgentResponse with the article in the answer field.
         """
-        return self.agent.run(
+        return super().run(
             task or self.DEFAULT_TASK,
             plan_first=True
         )
 
 
+if __name__ == "__main__":
+    agent = TradeIdeaAgent()
+    response = agent.run()
+    print(response)
