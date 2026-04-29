@@ -6,5 +6,5 @@
 
 ``vector`` — utilities for the vectorized stage
             (``apply_cadence``, ``zscore_rowwise``,
-            ``rank_to_long_short_weights``, ``weights_to_gross_cap``).
+            ``rank_to_long_short_weights``).
 """

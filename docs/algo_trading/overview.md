@@ -109,7 +109,7 @@ src/prophitai_algo_trading/
   execution/                   # ExecutionModel + OrderSink adapters
   accounting/                  # Portfolio, Position, Trade, CostModel
   engines/                     # Backtest, LiveRunner, BarRunner, lifecycle diff
-  data/                        # CSV loader + ZMQ streaming (publish/subscribe)
+  data/                        # CSV loader + async ZMQ subscriber for live bars
   brokers/                     # Vendor integrations (Alpaca) + startup snapshots
   analytics/                   # BacktestResult + calculate_metrics
 ```

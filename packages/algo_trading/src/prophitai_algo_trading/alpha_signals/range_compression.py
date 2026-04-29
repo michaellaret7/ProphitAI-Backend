@@ -25,28 +25,15 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from prophitai_algo_trading.alpha_signals.base import PerSymbolAlpha
+from prophitai_algo_trading.alpha_signals.helpers.true_range import (
+    true_range_panel,
+    true_range_series,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
 
     from prophitai_algo_trading.core.panel import PricePanel
-
-
-#     ================================
-# --> Helper funcs
-#     ================================
-
-def _true_range_series(df: "pd.DataFrame") -> "pd.Series":
-    """True Range series for one ticker — vectorized over rows."""
-    high = df["high"]
-    low = df["low"]
-    prev_close = df["close"].shift(1)
-
-    range_hl = high - low
-    range_hc = (high - prev_close).abs()
-    range_lc = (low - prev_close).abs()
-
-    return np.maximum(np.maximum(range_hl, range_hc), range_lc)
 
 
 #     ================================
@@ -89,7 +76,7 @@ class RangeCompressionAlpha(PerSymbolAlpha):
         self.lookback = long_window + 1
 
     def compute_score(self, symbol: str, df: "pd.DataFrame") -> float | None:
-        tr = _true_range_series(df).iloc[-self._long:]
+        tr = true_range_series(df).iloc[-self._long:]
 
         if len(tr) < self._long:
             return None
@@ -127,15 +114,7 @@ class RangeCompressionAlpha(PerSymbolAlpha):
                 "panel.low",
             )
 
-        high = panel.high
-        low = panel.low
-        prev_close = panel.close.shift(1)
-
-        range_hl = high - low
-        range_hc = (high - prev_close).abs()
-        range_lc = (low - prev_close).abs()
-
-        tr = np.maximum(np.maximum(range_hl, range_hc), range_lc)
+        tr = true_range_panel(panel.high, panel.low, panel.close)
 
         atr_short = tr.rolling(self._short).mean()
         atr_long = tr.rolling(self._long).mean()

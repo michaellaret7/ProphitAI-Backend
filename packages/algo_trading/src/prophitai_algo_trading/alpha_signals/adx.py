@@ -29,6 +29,10 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from prophitai_algo_trading.alpha_signals.base import PerSymbolAlpha
+from prophitai_algo_trading.alpha_signals.helpers.true_range import (
+    true_range_panel,
+    true_range_series,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -94,7 +98,6 @@ class ADXAlpha(PerSymbolAlpha):
 
         prev_high = high.shift(1)
         prev_low = low.shift(1)
-        prev_close = close.shift(1)
 
         up = high - prev_high
         down = prev_low - low
@@ -102,11 +105,7 @@ class ADXAlpha(PerSymbolAlpha):
         plus_dm = up.where((up > down) & (up > 0.0), 0.0)
         minus_dm = down.where((down > up) & (down > 0.0), 0.0)
 
-        tr = np.maximum.reduce([
-            high - low,
-            (high - prev_close).abs(),
-            (low - prev_close).abs(),
-        ])
+        tr = true_range_series(df)
 
         atr = _wilder_smoothed(tr, self._adx_w)
 
@@ -143,7 +142,6 @@ class ADXAlpha(PerSymbolAlpha):
 
         prev_high = high.shift(1)
         prev_low = low.shift(1)
-        prev_close = close.shift(1)
 
         up = high - prev_high
         down = prev_low - low
@@ -151,11 +149,7 @@ class ADXAlpha(PerSymbolAlpha):
         plus_dm = up.where((up > down) & (up > 0.0), 0.0)
         minus_dm = down.where((down > up) & (down > 0.0), 0.0)
 
-        range_hl = high - low
-        range_hc = (high - prev_close).abs()
-        range_lc = (low - prev_close).abs()
-
-        tr = np.maximum(np.maximum(range_hl, range_hc), range_lc)
+        tr = true_range_panel(high, low, close)
 
         atr = _wilder_smoothed(tr, self._adx_w)
 

@@ -57,7 +57,7 @@ packages/algo_trading/
     execution/               # ExecutionModel + OrderSink adapters
     accounting/              # Portfolio, Position, Trade, CostModel
     engines/                 # Backtest, LiveRunner, BarRunner, lifecycle
-    data/                    # CSV loader + ZMQ streaming
+    data/                    # CSV loader + async ZMQ subscriber
     brokers/                 # Vendor integrations (Alpaca)
     analytics/               # BacktestResult + calculate_metrics
   tests/

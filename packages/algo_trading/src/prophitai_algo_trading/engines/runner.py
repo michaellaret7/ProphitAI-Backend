@@ -18,15 +18,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from prophitai_algo_trading.core.models import PortfolioTarget
 from prophitai_algo_trading.engines.lifecycle import (
     emit_lifecycle,
     snapshot_positions,
 )
-from prophitai_algo_trading.core.models import PortfolioTarget
 
 if TYPE_CHECKING:
     from prophitai_algo_trading.algorithm.event import Algorithm
-    from prophitai_algo_trading.core.models import AlgorithmContext
+    from prophitai_algo_trading.core.models import AlgorithmContext, Insight
 
 
 #     ================================
@@ -58,7 +58,7 @@ class BarRunner:
             6. Lifecycle emission to the risk model if it structurally
                satisfies ``LifecycleAwareRiskModel``.
         """
-        insights: list = []
+        insights: list[Insight] = []
 
         for alpha in self.algorithm.alphas:
             insights.extend(alpha.update(ctx))

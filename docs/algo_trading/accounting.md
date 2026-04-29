@@ -24,7 +24,6 @@ Passed as `ctx.portfolio` every bar.  The ONLY mutable attribute on `AlgorithmCo
 | `portfolio.cash` | Available cash (float) |
 | `portfolio.initial_capital` | Starting equity |
 | `portfolio.positions` | `{symbol: Position}` for open positions |
-| `portfolio.position_count` | `len(positions)` |
 | `portfolio.get_position(symbol)` | `+1` (long), `-1` (short), `0` (flat) |
 | `portfolio.equity(prices=None)` | Mark-to-market equity using `prices` or last-known |
 | `portfolio.latest_prices` | Read-only copy of last-known prices |

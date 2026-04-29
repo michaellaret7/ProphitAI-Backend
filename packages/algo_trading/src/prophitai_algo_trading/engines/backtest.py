@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 def _union_index(data: dict[str, pd.DataFrame]) -> pd.DatetimeIndex:
     """Sorted union of every ticker's datetime index."""
-    all_ts: set = set()
+    all_ts: set[pd.Timestamp] = set()
 
     for df in data.values():
         all_ts.update(df.index)

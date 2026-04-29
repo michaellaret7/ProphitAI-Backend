@@ -167,17 +167,9 @@ Async generator consuming from `async_subscribe(symbol_filter=self.tickers)`.  S
 
 In practice, if you prefer live trading to start immediately after startup, pre-load enough history in `warmup()` and the gate never engages (well, it does for the first `max_lookback` live bars).  If you want a fresh lookback window of live data, seed minimally.
 
-## Running the live publisher
+## Connecting the live bar source
 
-Start the publisher in one process:
-
-```bash
-python -m prophitai_algo_trading.data.streaming.publisher --symbols AAPL MSFT ...
-```
-
-It binds `tcp://*:5555` and streams Alpaca minute bars over ZMQ PUB.  See `data.md`.
-
-Then start your `LiveRunner` in another process.  The subscriber connects to `tcp://localhost:5555`.
+`LiveRunner` consumes bars from `data/live/subscriber.async_subscribe`, which connects to `tcp://localhost:5555`.  Run a publisher process that binds `tcp://*:5555` and streams JSON-serialized bars (e.g. an Alpaca `StockDataStream` worker) before starting the runner.  See `data.md` for the bar format.
 
 ## Writing a custom engine
 

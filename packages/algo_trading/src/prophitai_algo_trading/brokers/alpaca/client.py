@@ -1,34 +1,38 @@
+"""Alpaca trading client connection manager.
+
+Wraps the Alpaca SDK ``TradingClient`` and resolves credentials from
+constructor arguments or environment variables. ``.env`` is loaded
+lazily on instantiation rather than at import so importing the module
+is side-effect-free.
 """
-Alpaca Client Connection Manager
-Handles initialization and connection to Alpaca Trading API
-"""
+
+from __future__ import annotations
+
+import os
 
 from alpaca.trading.client import TradingClient
-from typing import Optional
-import os
 from dotenv import load_dotenv
 
-load_dotenv()
 
 class AlpacaClient:
-    """Manages connection to Alpaca Trading API"""
+    """Manages connection to the Alpaca Trading API.
+
+    Args:
+        api_key: Alpaca API key. Falls back to ``ALPACA_API_KEY`` env var.
+        secret_key: Alpaca secret key. Falls back to ``ALPACA_SECRET_KEY``.
+        paper: Paper-trading mode when ``True`` (default), else live.
+    """
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
-        paper: bool = True
+        api_key: str | None = None,
+        secret_key: str | None = None,
+        paper: bool = True,
     ):
-        """
-        Initialize the Alpaca client connection
+        load_dotenv()
 
-        Args:
-            api_key: Alpaca API key (defaults to env variable ALPACA_API_KEY)
-            secret_key: Alpaca secret key (defaults to env variable ALPACA_SECRET_KEY)
-            paper: Use paper trading (True) or live trading (False)
-        """
-        self.api_key = api_key or os.getenv('ALPACA_API_KEY')
-        self.secret_key = secret_key or os.getenv('ALPACA_SECRET_KEY')
+        self.api_key = api_key or os.getenv("ALPACA_API_KEY")
+        self.secret_key = secret_key or os.getenv("ALPACA_SECRET_KEY")
 
         if not self.api_key or not self.secret_key:
             raise ValueError(
@@ -40,9 +44,7 @@ class AlpacaClient:
         self.client = TradingClient(self.api_key, self.secret_key, paper=paper)
 
     def get_client(self) -> TradingClient:
-        """Get the underlying TradingClient instance"""
         return self.client
 
     def is_paper_trading(self) -> bool:
-        """Check if client is in paper trading mode"""
         return self.paper

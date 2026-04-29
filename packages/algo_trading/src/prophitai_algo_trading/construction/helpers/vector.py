@@ -12,8 +12,6 @@ can compose them rather than re-deriving the math.
     rank_to_long_short_weights — quantile-cut + magnitude-weighted
                                long/short weight panel from a signed
                                score panel.
-    weights_to_gross_cap     — proportional rescale of a weight panel
-                               to respect a max-gross constraint.
 
 None of these are public package API — the engine and pre-built PCMs
 import them internally; user PCMs that want them import explicitly.
@@ -268,41 +266,3 @@ def _side_weights(
     raw = side_budget * (abs_scores / total)
 
     return np.minimum(raw, per_position_cap)
-
-
-#     ================================
-# --> Gross-exposure cap
-#     ================================
-
-def weights_to_gross_cap(
-    weights: pd.DataFrame, max_gross: float,
-) -> pd.DataFrame:
-    """Per-row proportional rescale so ``|weights|.sum(axis=1) <= max_gross``.
-
-    Rows already within the cap pass through unchanged. Rows above are
-    scaled down so the post-scale gross hits the cap exactly.
-
-    Args:
-        weights: Signed ``[date x ticker]`` weight panel.
-        max_gross: Maximum allowed sum of absolute weights per row.
-
-    Returns:
-        Scaled weight panel, same shape.
-    """
-    if max_gross <= 0:
-        raise ValueError("max_gross must be > 0")
-
-    if weights.empty:
-        return weights.copy()
-
-    gross = weights.abs().sum(axis=1)
-
-    over = gross > max_gross
-
-    if not over.any():
-        return weights.copy()
-
-    scale = pd.Series(1.0, index=weights.index)
-    scale.loc[over] = max_gross / gross.loc[over]
-
-    return weights.mul(scale, axis=0)

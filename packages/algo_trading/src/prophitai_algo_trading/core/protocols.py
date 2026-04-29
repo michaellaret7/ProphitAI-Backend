@@ -179,10 +179,6 @@ class ExecutionModel(Protocol):
 
 
 #     ================================
-# --> Optional lifecycle contract
-#     ================================
-
-#     ================================
 # --> Vectorized contracts
 #     ================================
 

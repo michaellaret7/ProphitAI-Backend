@@ -71,58 +71,19 @@ Returns `{ticker: DataFrame}` in the required shape (OHLCV, DatetimeIndex, ascen
 
 ## Live streaming
 
-ZMQ publisher/subscriber for real-time bars.  `data/streaming/`.
-
-### Publisher — `data/streaming/publisher.py`
-
-Streams Alpaca minute bars over ZMQ PUB on `tcp://*:5555`.
+Async ZMQ subscriber for real-time bars.  `data/live/subscriber.py`.
 
 ```python
-from prophitai_algo_trading.data.streaming.publisher import publish
-
-publish(symbols=["AAPL", "MSFT", "GOOGL"])
-```
-
-Requires `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` env vars.  Uses Alpaca's `StockDataStream` with the IEX feed.  Each bar is serialized to JSON as a `Bar` pydantic model:
-
-```python
-class Bar(BaseModel):
-    date: datetime
-    symbol: str
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: int
-```
-
-Runs in blocking mode — typically launched in its own process.
-
-### Subscriber — `data/streaming/subscriber.py`
-
-Three flavors:
-
-```python
-from prophitai_algo_trading.data.streaming.subscriber import (
-    async_subscribe,
-    subscribe,
-)
+from prophitai_algo_trading.data.live import async_subscribe
 
 # async — for asyncio-based engines (LiveRunner uses this)
 async for bar in async_subscribe(symbol_filter=["AAPL"]):
     ...
-
-# synchronous generator
-for bar in subscribe(stype="generator", symbol_filter=["AAPL"]):
-    ...
-
-# callback-style (blocking)
-def on_bar(bar):
-    ...
-subscribe(stype="callback", callback=on_bar, symbol_filter=["AAPL"])
 ```
 
-All three connect to `tcp://localhost:5555`.  `symbol_filter` is an optional allowlist — messages for other symbols are silently dropped.
+Connects to `tcp://localhost:5555`.  `symbol_filter` is an optional allowlist — messages for other symbols are silently dropped.
+
+The publisher half of the wire (binding `tcp://*:5555`) lives outside this package — bring your own bar source (e.g. an Alpaca `StockDataStream` worker that JSON-serializes each bar and publishes on the ZMQ socket) and the engine consumes from the subscriber side.
 
 ### Live bar format (dict on the wire)
 

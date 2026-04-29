@@ -84,11 +84,6 @@ class Portfolio:
         self._latest_prices: dict[str, float] = {}
 
     @property
-    def position_count(self) -> int:
-        """Number of open positions."""
-        return len(self.positions)
-
-    @property
     def latest_prices(self) -> dict[str, float]:
         """Read-only view of the last-known price per symbol."""
         return dict(self._latest_prices)

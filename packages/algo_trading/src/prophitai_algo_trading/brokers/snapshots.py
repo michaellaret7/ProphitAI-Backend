@@ -43,16 +43,3 @@ class BrokerStartupSnapshot:
     positions: list[BrokerPositionSnapshot] = field(default_factory=list)
     open_orders: list[BrokerOrderSnapshot] = field(default_factory=list)
     captured_at: datetime | None = None
-
-
-@dataclass
-class HydrationSummary:
-    """Result of startup hydration for logging and diagnostics."""
-
-    cash: float
-    equity: float
-    hydrated_count: int
-    hydrated_symbols: list[str]
-    unmanaged_symbols: list[str]
-    open_order_count: int
-    success: bool

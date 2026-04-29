@@ -19,25 +19,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
 
 from prophitai_algo_trading.alpha_signals.base import PerSymbolAlpha
+from prophitai_algo_trading.alpha_signals.helpers.streak import streak_series
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from prophitai_algo_trading.core.panel import PricePanel
-
-
-def _streak_series(close_series: "pd.Series") -> "pd.Series":
-    """Signed consecutive-direction streak count."""
-    diffs = close_series.diff()
-    sign = np.sign(diffs).fillna(0.0)
-
-    sign_change = sign != sign.shift(1)
-    group_id = sign_change.cumsum()
-
-    streak_count = sign.groupby(group_id).cumcount() + 1
-
-    return streak_count * sign
 
 
 class ConsecutiveBarFadeAlpha(PerSymbolAlpha):
@@ -58,7 +47,7 @@ class ConsecutiveBarFadeAlpha(PerSymbolAlpha):
         self.lookback = max(min_streak, normalize_window) + 2
 
     def compute_score(self, symbol: str, df: "pd.DataFrame") -> float | None:
-        streak = _streak_series(df["close"]).iloc[-1]
+        streak = streak_series(df["close"]).iloc[-1]
 
         if not np.isfinite(streak):
             return None
@@ -69,7 +58,7 @@ class ConsecutiveBarFadeAlpha(PerSymbolAlpha):
         return -float(streak) / float(self._norm)
 
     def compute_panel(self, panel: "PricePanel") -> "pd.DataFrame":
-        streak_panel = panel.close.apply(_streak_series)
+        streak_panel = panel.close.apply(streak_series)
 
         score = -streak_panel / float(self._norm)
 
