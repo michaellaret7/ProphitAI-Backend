@@ -77,6 +77,7 @@ backend_restructure/
 │   │           ├── prompts/          # base, planner, worker, plan_injection
 │   │           ├── evaluation/       # Agent evaluation
 │   │           ├── gym/              # Agent training/testing
+│   │           ├── observability/    # LLM observability (Langfuse)
 │   │           ├── logging/          # Agent printer
 │   │           └── utils/            # gpt_parser, token_count
 │   │
