@@ -4,7 +4,7 @@ A uv workspace monorepo for the ProphitAI platform — an AI-powered institution
 
 ## Architecture
 
-The monorepo is organized into **7 packages** (reusable libraries), **1 project** (deployable application), and **1 infra job runner**. The design is modeled after Apache Airflow's approach: a core framework consumed by multiple packages, all managed with uv workspaces and a single lockfile.
+The monorepo is organized into **7 packages** (reusable libraries), **3 projects** (deployable applications), and **1 infra job runner**. The design is modeled after Apache Airflow's approach: a core framework consumed by multiple packages, all managed with uv workspaces and a single lockfile.
 
 ### Dependency Graph
 
@@ -50,7 +50,7 @@ backend_restructure/
 ├── pyproject.toml                    # uv workspace definition
 ├── uv.lock                           # Single lockfile for all packages
 ├── Makefile                          # Dev targets (sync, dev, test, lint, format)
-├── .python-version                   # 3.13.5
+├── .python-version                   # 3.13.3
 ├── pyrightconfig.json
 ├── .claude/
 │
@@ -77,6 +77,7 @@ backend_restructure/
 │   │           ├── prompts/          # base, planner, worker, plan_injection
 │   │           ├── evaluation/       # Agent evaluation
 │   │           ├── gym/              # Agent training/testing
+│   │           ├── observability/    # LLM observability (Langfuse)
 │   │           ├── logging/          # Agent printer
 │   │           └── utils/            # gpt_parser, token_count
 │   │
@@ -143,33 +144,26 @@ backend_restructure/
 │       ├── pyproject.toml            # "prophitai-algo_trading"
 │       └── src/
 │           └── prophitai_algo_trading/
-│               ├── strategies/       # BaseStrategy + 7 concrete strategies
-│               │   ├── base.py
-│               │   ├── macd_momentum/
-│               │   ├── rsi_mean_reversion/
-│               │   ├── ichimoku_cross/
-│               │   ├── orb_breakout/
-│               │   ├── squeeze_breakout/
-│               │   ├── vwap_hurst_btc/
-│               │   └── kalman_stat_arb/
-│               ├── indicators/       # Pure technical indicator calculators
-│               ├── engines/          # Execution engines
-│               │   ├── live.py       # LiveRunner (ZMQ subscriber)
-│               │   ├── trade_routing.py
-│               │   └── backtest/     # Vectorized + event-driven backtesting
-│               ├── execution/        # Portfolio/position management, cost model
-│               ├── broker/           # Alpaca interface
-│               ├── data/             # Data clients (Alpaca, FMP, yfinance), DB, streaming
-│               └── utils/
+│               ├── core/             # Core abstractions and base types
+│               ├── algorithm/        # Algorithm definitions and logic
+│               ├── alpha_signals/    # Alpha signal generation (intraday, helpers)
+│               ├── analytics/        # Alpha research and performance analytics
+│               ├── construction/     # Portfolio construction helpers
+│               ├── portfolio/        # Portfolio management
+│               ├── risk/             # Risk models and controls
+│               ├── engines/          # Execution engines (live, backtest)
+│               ├── execution/        # Order execution and cost model
+│               ├── brokers/          # Alpaca interface
+│               └── data/             # Data clients (Alpaca, FMP, yfinance), DB, streaming
 │
 ├── projects/
-│   └── api/                          # ProphitAI API service
+│   ├── api/                          # ProphitAI API service
 │       ├── pyproject.toml            # "prophitai-api"
 │       ├── main.py                   # Uvicorn entrypoint
 │       └── src/
 │           └── prophitai_api/
 │               ├── app.py            # FastAPI factory (lifespan, middleware, CORS)
-│               ├── routes/           # 24 route modules
+│               ├── routes/           # 23 route modules
 │               ├── controllers/      # Request handling, orchestration
 │               │   ├── broker/       # Account, connections, trading
 │               │   ├── portfolio/    # Analytics, operations
@@ -188,6 +182,12 @@ backend_restructure/
 │               ├── cache/            # Redis client
 │               ├── schemas/          # Request/response Pydantic models
 │               └── utils/            # Case conversion, decorators, validation, serialization
+│   ├── fund/                         # Autonomous investment fund management
+│   │   ├── pyproject.toml            # "prophitai-fund"
+│   │   └── src/prophitai_fund/
+│   └── substack/                     # Agent-powered research and content
+│       ├── pyproject.toml            # "prophitai-substack"
+│       └── src/prophitai_substack/
 │
 └── infra/
     └── jobs/                         # Scheduled data jobs
@@ -210,11 +210,13 @@ backend_restructure/
 | `packages/data` | `prophitai-data` | Data layer — DB models, repositories, jobs, external API clients, caching | `shared`, `sqlalchemy`, `pandas` |
 | `packages/tools` | `prophitai-tools` | Agent tool library — composes atlas + calculations + data into callable tools | `atlas`, `calculations`, `data`, `shared` |
 | `packages/foundry` | `prophitai-foundry` | RAG system — embeddings, chunking, ingestion, retrieval | `shared`, `openai`, `pinecone`, `voyageai` |
-| `packages/algo_trading` | `prophitai-algo_trading` | Algorithmic trading — strategies, engines, indicators, execution, broker | `shared`, `pandas`, `numpy`, `alpaca-py`, `pyzmq` |
+| `packages/algo_trading` | `prophitai-algo_trading` | Algorithmic trading — alpha signals, engines, execution, portfolio, construction | `shared`, `calculations`, `data`, `pandas`, `numpy`, `alpaca-py`, `pyzmq` |
 
 | Deployable | PyPI Name | Description | Key Dependencies |
 |------------|-----------|-------------|------------------|
 | `projects/api` | `prophitai-api` | FastAPI application — routes, controllers, auth, Redis caching | `tools`, `foundry`, `algo_trading`, `atlas`, `data`, `calculations`, `shared`, `fastapi`, `redis` |
+| `projects/fund` | `prophitai-fund` | Autonomous investment idea generation and portfolio management | `atlas`, `data`, `tools`, `calculations`, `foundry`, `shared` |
+| `projects/substack` | `prophitai-substack` | Agent-powered deep research for outreach and content projects | `atlas`, `data`, `tools`, `calculations`, `foundry`, `shared` |
 | `infra/jobs` | `prophitai-jobs` | Scheduled data jobs — EOD, EOW, intraday, screeners, monitoring | `data`, `calculations`, `shared` |
 
 ## Naming Convention
@@ -223,9 +225,9 @@ All importable Python packages use the `prophitai_` prefix:
 
 ```python
 from prophitai_atlas.agents import AgentBase
-from prophitai_calculations.risk import calculate_var
-from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
-from prophitai_algo_trading.engines import LiveRunner, VectorizedBacktestEngine
+from prophitai_calculations.risk import calc_var
+from prophitai_algo_trading.alpha_signals.rsi import RSIAlpha
+from prophitai_algo_trading.engines import LiveRunner, VectorBacktest
 ```
 
 Why `prophitai_*` over short names:
