@@ -225,9 +225,9 @@ All importable Python packages use the `prophitai_` prefix:
 
 ```python
 from prophitai_atlas.agents import AgentBase
-from prophitai_calculations.risk import calculate_var
-from prophitai_algo_trading.strategies.macd_momentum import MACDMomentum
-from prophitai_algo_trading.engines import LiveRunner, VectorizedBacktestEngine
+from prophitai_calculations.risk import calc_var
+from prophitai_algo_trading.alpha_signals.rsi import RSIAlpha
+from prophitai_algo_trading.engines import LiveRunner, VectorBacktest
 ```
 
 Why `prophitai_*` over short names:
