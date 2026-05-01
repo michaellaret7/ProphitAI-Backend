@@ -1,12 +1,12 @@
 """WorkerAgent - Lightweight agent for executing focused tasks with scoped tools."""
 
 from functools import partial
-from typing import Optional, List, Callable, Any
+from typing import Any, Callable, List, Optional
 
 from prophitai_atlas.agents.base import AgentBase
 from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
-from prophitai_atlas.prompts.worker import build_worker_system_blocks, build_worker_system_prompt
+from prophitai_atlas.prompts.worker import build_worker_system_prompt
 from prophitai_atlas.tools.base import llm_web_search
 from prophitai_atlas.tools.base.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
 
@@ -82,7 +82,7 @@ class WorkerAgent(AgentBase):
             worker_prompt = self._build_system_prompt()
 
             self.messages = [
-                {"role": "system", "content": worker_prompt},
+                {"role": "system", "content": self._wrap_system_for_provider(worker_prompt)},
                 {"role": "user", "content": self.task},
             ]
 
@@ -112,20 +112,10 @@ class WorkerAgent(AgentBase):
     # --> Helper funcs
     # ================================
 
-    def _build_system_prompt(self) -> Any:
-        """Build the system prompt, using custom prompt if set or default otherwise."""
+    def _build_system_prompt(self) -> str:
+        """Build the system prompt as plain text. Provider wrapping happens at the boundary."""
         if self.custom_system_prompt:
             date = get_current_utc_time().strftime("%m/%d/%Y")
-
-            if self.provider == "anthropic":
-                return [
-                    {"type": "text", "text": self.custom_system_prompt, "cacheable": True},
-                    {"type": "text", "text": f"Today's date is {date}.", "cacheable": False},
-                ]
-
             return f"{self.custom_system_prompt}\n\nToday's date is {date}."
-
-        if self.provider == "anthropic":
-            return build_worker_system_blocks()
 
         return build_worker_system_prompt()

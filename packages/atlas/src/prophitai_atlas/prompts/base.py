@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from prophitai_shared.time_utils import get_utc_date_str
 
 
@@ -70,18 +68,9 @@ Call `register_tools` with `categories` to load entire groups, or `tools` for in
 
 
 def build_base_system_prompt() -> str:
-    """Build the generic base system prompt with date injected."""
-    return "\n\n".join(
-        [
-            _BASE_SYSTEM_STATIC_PROMPT,
-            f"Today's date is {get_utc_date_str()}.",
-        ]
-    )
+    """Build the base system prompt with the current date appended.
 
-
-def build_base_system_blocks() -> list[dict[str, Any]]:
-    """Build Anthropic-friendly system blocks with explicit cache boundaries."""
-    return [
-        {"type": "text", "text": _BASE_SYSTEM_STATIC_PROMPT, "cacheable": True},
-        {"type": "text", "text": f"Today's date is {get_utc_date_str()}.", "cacheable": False},
-    ]
+    Provider-specific block wrapping (e.g. Anthropic cache_control) happens at
+    the message-build boundary in the agent — this is just text.
+    """
+    return f"{_BASE_SYSTEM_STATIC_PROMPT}\n\nToday's date is {get_utc_date_str()}."

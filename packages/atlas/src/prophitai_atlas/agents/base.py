@@ -122,6 +122,18 @@ class AgentBase(ABC):
         agent_name = self.__class__.__name__
         return f"{agent_name} (planned)" if planned else agent_name
 
+    def _wrap_system_for_provider(self, prompt: str) -> Union[str, List[Dict[str, Any]]]:
+        """Wrap a system prompt for the active provider's API expectations.
+
+        Anthropic gets a single cache-controlled text block so prompt caching kicks in.
+        Other providers (OpenAI, Grok, etc.) take a plain string — they cache by
+        automatic prefix matching with no opt-in.
+        """
+        if self.provider == "anthropic":
+            return [{"type": "text", "text": prompt, "cacheable": True}]
+
+        return prompt
+
     @abstractmethod
     def run(self, *args, **kwargs) -> Any:
         """Execute the agent's main loop. Subclasses must implement."""

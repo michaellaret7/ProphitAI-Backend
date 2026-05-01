@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from prophitai_shared.time_utils import get_current_utc_time
 
 
@@ -56,20 +54,10 @@ When you've exhausted your investigation, provide a comprehensive answer that fu
 
 
 def build_worker_system_prompt() -> str:
-    """Build the worker system prompt with the current date injected."""
-    date = get_current_utc_time().strftime("%m/%d/%Y")
-    return "\n\n".join(
-        [
-            _WORKER_SYSTEM_STATIC_PROMPT,
-            f"Today's date is {date}.",
-        ]
-    )
+    """Build the worker system prompt with the current date appended.
 
-
-def build_worker_system_blocks() -> list[dict[str, Any]]:
-    """Build Anthropic-friendly worker system blocks with explicit cache boundaries."""
+    Provider-specific block wrapping happens at the agent's message-build
+    boundary — this is just text.
+    """
     date = get_current_utc_time().strftime("%m/%d/%Y")
-    return [
-        {"type": "text", "text": _WORKER_SYSTEM_STATIC_PROMPT, "cacheable": True},
-        {"type": "text", "text": f"Today's date is {date}.", "cacheable": False},
-    ]
+    return f"{_WORKER_SYSTEM_STATIC_PROMPT}\n\nToday's date is {date}."
