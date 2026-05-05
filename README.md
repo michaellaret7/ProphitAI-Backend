@@ -101,7 +101,7 @@ backend_restructure/
 │   │           ├── db/               # 4 SQLAlchemy engines, models (market, user, alts, macro)
 │   │           ├── session/          # @with_session, @with_transaction, @with_sessions decorators
 │   │           ├── repositories/     # Data access layer
-│   │           │   ├── price.py, ticker.py, etf.py, news.py, ratings.py, screener.py, transcripts.py
+│   │           │   ├── price.py, ticker.py, etf.py, news.py, ratings.py, screener/, transcripts.py
 │   │           │   ├── alts/
 │   │           │   ├── fundamentals/ # Fetchers, statements, models
 │   │           │   ├── macro/        # Rates, commodities, indicators, calendar
@@ -126,7 +126,10 @@ backend_restructure/
 │   │           ├── screener/         # Equity and ETF screening
 │   │           ├── macro/            # Commodity prices, indicators, US rates
 │   │           ├── news/             # General news, ticker news, press releases
-│   │           └── watchlist/        # Watchlist retrieval
+│   │           ├── watchlist/        # Watchlist retrieval
+│   │           ├── institutional/    # Fund holdings and institutional data
+│   │           ├── render/           # Render cloud platform (deploys, services, logs, env vars)
+│   │           └── sandbox/          # Sandboxed agent code execution environment
 │   │
 │   ├── foundry/                      # RAG system (embeddings, chunking, retrieval)
 │   │   ├── pyproject.toml            # "prophitai-foundry"
