@@ -54,18 +54,23 @@ class ToolHandler:
     def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
         return getattr(self.agent, 'chat_callback', None)
 
-    def handle_tool_calls(self, tool_calls: List[NormalizedToolCall]) -> None:
+    def _ensure_assistant_message_recorded(self, tool_calls: List[NormalizedToolCall]) -> None:
+        # Reason: the streaming loop may pre-append the assistant tool-call turn; this guard
+        # prevents a duplicate that would break the assistant(tool_calls) -> tool(result) pairing.
         last = self.agent.messages[-1] if self.agent.messages else None
-        already_added = isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls")
+        if isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls"):
+            return
 
-        if not already_added:
-            self._sanitize_tool_call_args(tool_calls)
+        self._sanitize_tool_call_args(tool_calls)
 
-            self.agent.messages.append({
-                "role": "assistant",
-                "content": "",
-                "tool_calls": tool_calls
-            })
+        self.agent.messages.append({
+            "role": "assistant",
+            "content": "",
+            "tool_calls": tool_calls,
+        })
+
+    def handle_tool_calls(self, tool_calls: List[NormalizedToolCall]) -> None:
+        self._ensure_assistant_message_recorded(tool_calls)
 
         for tool_call in tool_calls:
             name = tool_call.name
@@ -118,6 +123,8 @@ class ToolHandler:
                 )
 
     def handle_tool_calls_parallel(self, tool_calls: List[NormalizedToolCall]) -> None:
+        self._ensure_assistant_message_recorded(tool_calls)
+
         num_tools = len(tool_calls)
         self.printer.parallel_start(num_tools)
 

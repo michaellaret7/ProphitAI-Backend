@@ -70,7 +70,7 @@ class ExecutionLoop:
                         callback.on_iteration_start(iteration=i)
                         self.printer.iteration_start(i, self.agent.max_iterations)
 
-                        response = self.call_llm()
+                        response = self.call_llm() # <-- this is where the LLM call is made and the response dict is returned
                         
                         iteration_tokens = self._track_token_usage(response)
                         iteration_usage = self._build_iteration_usage(response)
