@@ -191,16 +191,21 @@ class ToolHandler:
     def _add_tool_result_parallel(self, tool_call: NormalizedToolCall, result: Any, name: str, args: Dict[str, Any]) -> bool:
         tool_validation = validate_tool_call(name, args, result, self.agent)
         tool_validation_dict = yaml.safe_load(tool_validation)
+
         success, _ = check_tool_success(tool_validation_dict)
+
         self.printer.parallel_tool_result(name, result, success)
+
         content = stringify_for_llm(result) if success else yaml.dump(
             tool_validation_dict, default_flow_style=False, sort_keys=False
         )
+
         self.agent.messages.append({
             "role": "tool",
             "tool_call_id": tool_call.id,
             "content": content
         })
+        
         return success
 
     @staticmethod
