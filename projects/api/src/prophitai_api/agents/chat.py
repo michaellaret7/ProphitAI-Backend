@@ -34,9 +34,9 @@ class ChatAgent:
         session_id: str = "chat",
         user_id: Optional[str] = None,
         provider: str = "anthropic",
-        model: str = "claude-sonnet-4-6",
+        model: str = "claude-opus-4-7",
         # provider: str = "grok",
-        # model: str = "grok-4.20-0309-non-reasoning",
+        # model: str = "grok-4.3",
         max_iterations: int = 200,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):

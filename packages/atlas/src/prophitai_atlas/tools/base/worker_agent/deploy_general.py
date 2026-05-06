@@ -126,7 +126,10 @@ def deploy_general_worker(
     """
     # Reason: Lazy imports to avoid circular dependency (atlas -> tools -> atlas).
     from prophitai_tools.registry import ALL_TOOL_FUNCTIONS
-    from prophitai_atlas.tools.base.worker_agent.resolve import resolve_tools_by_name
+    from prophitai_atlas.tools.base.worker_agent.resolve import (
+        resolve_tools_by_name,
+        WORKER_BUILTIN_TOOLS,
+    )
     from prophitai_atlas.agents.worker_agent import WorkerAgent
 
     if not tools:
@@ -134,11 +137,17 @@ def deploy_general_worker(
 
     resolved_tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, tools)
 
+    # Reason: If nothing resolved but every requested tool is a WorkerAgent built-in
+    # (llm_web_search, write_note, register_tools), proceed silently — the worker
+    # already has those tools registered at construction time.
     if not resolved_tools:
-        return error_response(
-            f"None of the requested tools could be resolved: {tools}. "
-            f"They were all invalid or built-in worker tools."
-        )
+        only_builtins = all(name in WORKER_BUILTIN_TOOLS for name in tools)
+
+        if not only_builtins:
+            return error_response(
+                f"None of the requested tools could be resolved: {tools}. "
+                f"They were all invalid or built-in worker tools."
+            )
 
     full_task = f"CONTEXT:\n{context}\n\n{task}" if context else task
 
