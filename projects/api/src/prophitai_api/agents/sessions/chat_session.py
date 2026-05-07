@@ -127,7 +127,7 @@ class ChatSessionManager:
         return True
 
     def get_history(
-        self, session_id: str, max_messages: int = 20
+        self, session_id: str, max_messages: int = 40
     ) -> List[Dict[str, Any]]:
         """Get conversation history for a session.
 
