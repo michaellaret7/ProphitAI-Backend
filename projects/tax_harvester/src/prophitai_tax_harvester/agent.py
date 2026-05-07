@@ -52,7 +52,7 @@ class TaxHarvesterAgent(Agent):
 
     def run(self, task: Optional[str] = None, **kwargs) -> AgentResponse:
         """Execute the tax harvester agent."""
-        return super().run(task or self.DEFAULT_TASK, **kwargs)
+        return super().run(task or self.DEFAULT_TASK, plan_first=True, **kwargs)
 
 
 if __name__ == "__main__":
