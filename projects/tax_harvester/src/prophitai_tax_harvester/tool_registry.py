@@ -36,6 +36,19 @@ from prophitai_tools.ticker.info.description import get_etf_info
 from prophitai_tools.ticker.info.etf_holdings import get_etf_holdings
 
 # ================================
+# --> Replacement diligence (fundamentals, performance, risk)
+# ================================
+from prophitai_tools.ticker.fundamentals.statements import get_ticker_fundamental_data
+from prophitai_tools.ticker.fundamentals.ttm_ratios import get_ratios_ttm
+from prophitai_tools.ticker.performance import ticker_performance
+from prophitai_tools.ticker.risk import ticker_risk
+
+# ================================
+# --> Event awareness (news for harvest / replacement candidates)
+# ================================
+from prophitai_tools.news.ticker_news import get_ticker_news
+
+# ================================
 # --> Exposure preservation (pairwise correlation)
 # ================================
 from prophitai_tools.portfolio.correlation import portfolio_correlation
@@ -52,6 +65,13 @@ TAX_HARVESTER_TOOLS: List[Callable] = [
     # substantially-identical check
     get_etf_info,
     get_etf_holdings,
+    # replacement diligence
+    get_ticker_fundamental_data,
+    get_ratios_ttm,
+    ticker_performance,
+    ticker_risk,
+    # event awareness
+    get_ticker_news,
     # exposure preservation
     portfolio_correlation,
 ]

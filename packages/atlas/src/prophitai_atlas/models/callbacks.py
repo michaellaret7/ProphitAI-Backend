@@ -6,6 +6,8 @@ enabling real-time streaming to frontends via WebSocket or other mechanisms.
 
 from typing import Any, Dict, List, Protocol
 
+from prophitai_atlas.utils.truncation import truncate_for_display
+
 
 class ChatCallback(Protocol):
     """Protocol for streaming chat execution events to frontend.
@@ -158,12 +160,9 @@ class WorkerCallbackWrapper:
 
     def on_tool_call_result(self, tool_call_id: str, tool_name: str,
                             result: Any, success: bool, duration_ms: int) -> None:
-        result_str = str(result)
-        if len(result_str) > 2000:
-            result_str = result_str[:2000] + "... (truncated)"
         self._send("worker_tool_call_result", {
             "tool_call_id": tool_call_id, "tool_name": tool_name,
-            "result": result_str, "success": success, "duration_ms": duration_ms,
+            "result": truncate_for_display(result), "success": success, "duration_ms": duration_ms,
         })
 
     def on_iteration_start(self, iteration: int) -> None:

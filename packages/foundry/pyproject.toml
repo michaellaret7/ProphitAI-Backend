@@ -21,6 +21,7 @@ dependencies = [
     "docling",
     "openpyxl",
     "xlrd",
+    "pyreadline3; sys_platform == 'win32'",
 ]
 
 [build-system]

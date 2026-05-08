@@ -38,7 +38,7 @@ class TaxHarvesterAgent(Agent):
     ):
         date = get_current_utc_time().strftime("%m/%d/%Y")
         prompt_path = Path(__file__).parent / "system.md"
-        system_prompt = prompt_path.read_text().format(date=date)
+        system_prompt = prompt_path.read_text().replace("{date}", date)
 
         super().__init__(
             tools=TAX_HARVESTER_TOOLS,
@@ -52,7 +52,7 @@ class TaxHarvesterAgent(Agent):
 
     def run(self, task: Optional[str] = None, **kwargs) -> AgentResponse:
         """Execute the tax harvester agent."""
-        return super().run(task or self.DEFAULT_TASK, plan_first=True, **kwargs)
+        return super().run(task or self.DEFAULT_TASK, plan_first=False, **kwargs)
 
 
 if __name__ == "__main__":

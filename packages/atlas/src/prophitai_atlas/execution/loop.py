@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from typing import TYPE_CHECKING, Dict, Any, List, Optional
 
-from prophitai_atlas.execution.tool_handler import should_run_parallel
 from prophitai_atlas.models.new_plan import TaskStatus
-from prophitai_shared import NormalizedLLMResponse, NormalizedToolCall
+from prophitai_shared import NormalizedLLMResponse
 
 if TYPE_CHECKING:
     from prophitai_atlas.agents.base import AgentBase
@@ -64,22 +62,21 @@ class ExecutionLoop:
                         input=self._build_iteration_input(i),
                     ) as iteration_span:
 
-                        # Set current iteration for tool handler callback events
-                        self.agent.tool_handler.current_iteration = i
-
                         callback.on_iteration_start(iteration=i)
                         self.printer.iteration_start(i, self.agent.max_iterations)
 
                         response = self.call_llm() # <-- this is where the LLM call is made and the response dict is returned
-                        
+
                         iteration_tokens = self._track_token_usage(response)
                         iteration_usage = self._build_iteration_usage(response)
 
                         assistant_text = response.assistant_text
 
                         if response.tool_calls:
-                            called_tools = self._handle_tool_calls(
-                                response.tool_calls, assistant_text
+                            called_tools = self.agent.tool_handler.dispatch(
+                                response.tool_calls,
+                                assistant_text,
+                                iteration=i,
                             )
 
                             tool_calls_made.extend(called_tools)
@@ -105,6 +102,7 @@ class ExecutionLoop:
                                     "role": "assistant",
                                     "content": "I need to continue working on the remaining tasks."
                                 })
+                                
                                 self.agent.messages.append({
                                     "role": "user",
                                     "content": (
@@ -133,31 +131,13 @@ class ExecutionLoop:
 
                             self.printer.iteration_complete(i, "answer_ready")
 
-                            callback.on_run_finished(
-                                answer=assistant_text,
-                                tool_calls_made=tool_calls_made,
-                                iterations=i,
-                                tokens_used=self.agent.total_tokens,
+                            return self._finalize(
                                 stop_reason="answer_ready",
+                                answer=assistant_text,
+                                iterations=i,
+                                tool_calls_made=tool_calls_made,
+                                loop_span=loop_span,
                             )
-
-                            loop_span.update(output={
-                                "stop_reason": "answer_ready",
-                                "iterations": i,
-                                "total_tokens": self.agent.total_tokens,
-                                "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
-                                "cache_read_input_tokens": self.agent.cache_read_input_tokens,
-                            })
-
-                            return {
-                                "answer": assistant_text,
-                                "tool_calls": tool_calls_made,
-                                "total_tokens": self.agent.total_tokens,
-                                "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
-                                "cache_read_input_tokens": self.agent.cache_read_input_tokens,
-                                "iterations": i,
-                                "stop_reason": "answer_ready"
-                            }
 
                 # Max iterations reached
                 callback.on_iteration_end(
@@ -173,31 +153,13 @@ class ExecutionLoop:
                     else "Unable to complete request within iteration limit."
                 )
 
-                callback.on_run_finished(
-                    answer=final_answer,
-                    tool_calls_made=tool_calls_made,
-                    iterations=self.agent.max_iterations,
-                    tokens_used=self.agent.total_tokens,
+                return self._finalize(
                     stop_reason="max_iterations",
+                    answer=final_answer,
+                    iterations=self.agent.max_iterations,
+                    tool_calls_made=tool_calls_made,
+                    loop_span=loop_span,
                 )
-
-                loop_span.update(output={
-                    "stop_reason": "max_iterations",
-                    "iterations": self.agent.max_iterations,
-                    "total_tokens": self.agent.total_tokens,
-                    "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
-                    "cache_read_input_tokens": self.agent.cache_read_input_tokens,
-                })
-
-                return {
-                    "answer": final_answer,
-                    "tool_calls": tool_calls_made,
-                    "total_tokens": self.agent.total_tokens,
-                    "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
-                    "cache_read_input_tokens": self.agent.cache_read_input_tokens,
-                    "iterations": self.agent.max_iterations,
-                    "stop_reason": "max_iterations"
-                }
 
             except Exception as e:
                 callback.on_run_error(error=str(e))
@@ -214,9 +176,11 @@ class ExecutionLoop:
 
     def _track_token_usage(self, response: NormalizedLLMResponse) -> int:
         iteration_tokens = int(response.usage.total_tokens)
+
         self.agent.total_tokens += iteration_tokens
         self.agent.cache_creation_input_tokens += int(response.usage.cache_creation_input_tokens)
         self.agent.cache_read_input_tokens += int(response.usage.cache_read_input_tokens)
+
         return iteration_tokens
 
     @staticmethod
@@ -268,26 +232,39 @@ class ExecutionLoop:
 
         return [t for t in plan.tasks if t.status != TaskStatus.COMPLETE]
 
-    @staticmethod
-    def _sanitize_tool_calls(tool_calls: list[NormalizedToolCall]) -> None:
-        for tc in tool_calls:
-            try:
-                json.loads(tc.arguments_json or "{}")
-            except (json.JSONDecodeError, TypeError):
-                tc.arguments_json = "{}"
+    def _finalize(
+        self,
+        *,
+        stop_reason: str,
+        answer: str,
+        iterations: int,
+        tool_calls_made: List[str],
+        loop_span: Any,
+    ) -> Dict[str, Any]:
+        """Emit terminal callbacks/spans and build the loop's return payload."""
+        self.agent.chat_callback.on_run_finished(
+            answer=answer,
+            tool_calls_made=tool_calls_made,
+            iterations=iterations,
+            tokens_used=self.agent.total_tokens,
+            stop_reason=stop_reason,
+        )
 
-    def _handle_tool_calls(self, tool_calls: list[NormalizedToolCall], assistant_text: str) -> List[str]:
-        self._sanitize_tool_calls(tool_calls)
-
-        self.agent.messages.append({
-            "role": "assistant",
-            "content": assistant_text,
-            "tool_calls": tool_calls
+        loop_span.update(output={
+            "stop_reason": stop_reason,
+            "iterations": iterations,
+            "total_tokens": self.agent.total_tokens,
+            "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
+            "cache_read_input_tokens": self.agent.cache_read_input_tokens,
         })
 
-        if should_run_parallel(tool_calls):
-            self.agent.tool_handler.handle_tool_calls_parallel(tool_calls)
-        else:
-            self.agent.tool_handler.handle_tool_calls(tool_calls)
+        return {
+            "answer": answer,
+            "tool_calls": tool_calls_made,
+            "total_tokens": self.agent.total_tokens,
+            "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
+            "cache_read_input_tokens": self.agent.cache_read_input_tokens,
+            "iterations": iterations,
+            "stop_reason": stop_reason,
+        }
 
-        return [tc.name for tc in tool_calls]

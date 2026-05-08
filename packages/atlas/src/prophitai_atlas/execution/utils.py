@@ -24,18 +24,3 @@ def stringify_for_llm(obj: Any) -> str:
         return json.dumps(obj, default=default_handler, ensure_ascii=False)
     except Exception:
         return str(obj)
-
-
-def check_tool_success(tool_validation_dict: dict) -> tuple[bool, str | None]:
-    """Check if a tool call was successful."""
-    success = tool_validation_dict.get("success", True)
-    if not success:
-        return False, tool_validation_dict.get("error", "Unknown error")
-    data = tool_validation_dict.get("data")
-    if data is None:
-        return False, "Tool returned success=True but data is None (no data available)"
-    if isinstance(data, (dict, list)) and len(data) == 0:
-        return False, "Tool returned success=True but data is empty (no data available)"
-    if isinstance(data, str) and data.strip() == "":
-        return False, "Tool returned success=True but data is empty string (no data available)"
-    return True, None

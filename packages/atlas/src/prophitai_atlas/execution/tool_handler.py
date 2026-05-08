@@ -8,10 +8,11 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING, Union
 
 import yaml
 
-from prophitai_atlas.execution.validation import validate_tool_call
+from prophitai_atlas.execution.validation import validate_tool_result
+from prophitai_atlas.execution.utils import stringify_for_llm
 from prophitai_atlas.logging import AgentPrinter
 from prophitai_atlas.tools.responses import error_response
-from prophitai_atlas.execution.utils import stringify_for_llm, check_tool_success
+from prophitai_atlas.utils.truncation import truncate_for_display
 from prophitai_shared import NormalizedToolCall
 
 if TYPE_CHECKING:
@@ -21,17 +22,35 @@ if TYPE_CHECKING:
 
 
 # Tools that modify agent state and must run sequentially
-SEQUENTIAL_ONLY_TOOLS = {"think", "register_tools", "update_plan"}
-MAX_TOOL_RESULT_CHARS = 2000
+_SEQUENTIAL_ONLY_TOOLS = {"think", "register_tools", "update_plan"}
 
-def should_run_parallel(tool_calls: List[NormalizedToolCall]) -> bool:
+def _should_run_parallel(tool_calls: List[NormalizedToolCall]) -> bool:
     """Determine if tool calls can be executed in parallel."""
     if len(tool_calls) <= 1:
         return False
     for tool_call in tool_calls:
-        if tool_call.name in SEQUENTIAL_ONLY_TOOLS:
+        if tool_call.name in _SEQUENTIAL_ONLY_TOOLS:
             return False
     return True
+
+def _sanitize_tool_call_args(tool_calls: List[NormalizedToolCall]) -> None:
+    """Replace unparseable arguments_json with '{}' so downstream parsing is safe."""
+    for tc in tool_calls:
+        try:
+            json.loads(tc.arguments_json or "{}")
+        except (json.JSONDecodeError, TypeError):
+            tc.arguments_json = "{}"
+
+
+def _tool_reported_failure(result: Any) -> bool:
+    """True if the tool result is a payload reporting success=False."""
+    try:
+        parsed = yaml.safe_load(result) if isinstance(result, str) else result
+    except Exception:
+        return False
+
+    return isinstance(parsed, dict) and parsed.get("success") is False
+
 
 class ToolHandler:
     """Handles tool execution and result formatting."""
@@ -46,7 +65,6 @@ class ToolHandler:
         self.agent = agent
         self.printer = printer
         self.observer = observer
-        self.current_iteration: int = 0
         self.retry = False
         self._clerk_id_signature_cache: dict[Any, bool] = {}
 
@@ -54,23 +72,41 @@ class ToolHandler:
     def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
         return getattr(self.agent, 'chat_callback', None)
 
-    def _ensure_assistant_message_recorded(self, tool_calls: List[NormalizedToolCall]) -> None:
-        # Reason: the streaming loop may pre-append the assistant tool-call turn; this guard
-        # prevents a duplicate that would break the assistant(tool_calls) -> tool(result) pairing.
-        last = self.agent.messages[-1] if self.agent.messages else None
-        if isinstance(last, dict) and last.get("role") == "assistant" and last.get("tool_calls"):
-            return
+    def dispatch(
+        self,
+        tool_calls: List[NormalizedToolCall],
+        assistant_text: str,
+        *,
+        iteration: int,
+    ) -> List[str]:
+        """Sole entry point for tool-call execution from the loop.
 
-        self._sanitize_tool_call_args(tool_calls)
+        Sanitizes arguments, records the assistant turn, and routes to the
+        sequential or parallel execution path. Returns the names of the tools
+        that were dispatched (preserves order).
+        """
+        _sanitize_tool_call_args(tool_calls)
 
+        # Add the assistant text and tool calls to the message history before tool results are appended
         self.agent.messages.append({
             "role": "assistant",
-            "content": "",
+            "content": assistant_text,
             "tool_calls": tool_calls,
         })
 
-    def handle_tool_calls(self, tool_calls: List[NormalizedToolCall]) -> None:
-        self._ensure_assistant_message_recorded(tool_calls)
+        if _should_run_parallel(tool_calls):
+            self._run_parallel(tool_calls, iteration=iteration)
+        else:
+            self._run_sequential(tool_calls, iteration=iteration)
+
+        return [tc.name for tc in tool_calls]
+
+    def _run_sequential(
+        self,
+        tool_calls: List[NormalizedToolCall],
+        *,
+        iteration: int,
+    ) -> None:
 
         for tool_call in tool_calls:
             name = tool_call.name
@@ -85,16 +121,19 @@ class ToolHandler:
                     tool_call_id=tool_call_id,
                     tool_name=name,
                     arguments=args,
-                    iteration=self.current_iteration,
+                    iteration=iteration,
                 )
 
             if parse_error:
                 self.printer.parse_error(args_json)
+                
                 result = error_response(
                     f"Tool '{name}' was not executed because arguments could not be parsed. "
                     f"{parse_error}. Please retry the tool call with valid JSON arguments."
                 )
-                self._add_tool_result(tool_call, result, name, args)
+
+                self._add_tool_result(tool_call, result, name, args, parallel=False)
+
                 if self.chat_callback:
                     self.chat_callback.on_tool_call_result(
                         tool_call_id=tool_call_id,
@@ -103,28 +142,32 @@ class ToolHandler:
                         success=False,
                         duration_ms=0,
                     )
+
                 continue
 
             self.printer.tool_arguments(args)
 
             start_time = time.perf_counter()
-            result = self._execute_tool(name, args)
+            result = self._execute_tool(name, args) # run the tool function with the arguments 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
-            success = self._add_tool_result(tool_call, result, name, args)
+            success = self._add_tool_result(tool_call, result, name, args, parallel=False)
 
             if self.chat_callback:
                 self.chat_callback.on_tool_call_result(
                     tool_call_id=tool_call_id,
                     tool_name=name,
-                    result=self._truncate_tool_output(result),
+                    result=truncate_for_display(result),
                     success=success,
                     duration_ms=duration_ms,
                 )
 
-    def handle_tool_calls_parallel(self, tool_calls: List[NormalizedToolCall]) -> None:
-        self._ensure_assistant_message_recorded(tool_calls)
-
+    def _run_parallel(
+        self,
+        tool_calls: List[NormalizedToolCall],
+        *,
+        iteration: int,
+    ) -> None:
         num_tools = len(tool_calls)
         self.printer.parallel_start(num_tools)
 
@@ -145,7 +188,7 @@ class ToolHandler:
                     tool_call_id=tool_call_id,
                     tool_name=name,
                     arguments=args,
-                    iteration=self.current_iteration,
+                    iteration=iteration,
                 )
 
         start_times = {tc.id: time.perf_counter() for tc in tool_calls}
@@ -153,14 +196,15 @@ class ToolHandler:
         end_time = time.perf_counter()
 
         for (tool_call, name, args, _parse_error), result in zip(parsed_calls, results):
-            success = self._add_tool_result_parallel(tool_call, result, name, args)
-            
+            success = self._add_tool_result(tool_call, result, name, args, parallel=True)
+
             if self.chat_callback:
                 duration_ms = int((end_time - start_times[tool_call.id]) * 1000)
+                
                 self.chat_callback.on_tool_call_result(
                     tool_call_id=tool_call.id,
                     tool_name=name,
-                    result=self._truncate_tool_output(result),
+                    result=truncate_for_display(result),
                     success=success,
                     duration_ms=duration_ms,
                 )
@@ -186,57 +230,25 @@ class ToolHandler:
                             results.append(futures[i].result())
                         except Exception as e:
                             results.append(error_response(f"Error executing {name}: {str(e)}"))
+
         except Exception as e:
             self.printer.error(f"Parallel execution failed: {e}")
             results = [error_response(f"Parallel execution failed: {e}")] * len(parsed_calls)
+
         return results
 
     def _execute_tool_with_context(self, ctx, name: str, args: Dict[str, Any]) -> Any:
         with self.observer.attach_context(ctx):
             return self._execute_tool(name, args)
 
-    def _add_tool_result_parallel(self, tool_call: NormalizedToolCall, result: Any, name: str, args: Dict[str, Any]) -> bool:
-        tool_validation = validate_tool_call(name, args, result, self.agent)
-        tool_validation_dict = yaml.safe_load(tool_validation)
-
-        success, _ = check_tool_success(tool_validation_dict)
-
-        self.printer.parallel_tool_result(name, result, success)
-
-        content = stringify_for_llm(result) if success else yaml.dump(
-            tool_validation_dict, default_flow_style=False, sort_keys=False
-        )
-
-        self.agent.messages.append({
-            "role": "tool",
-            "tool_call_id": tool_call.id,
-            "content": content
-        })
-        
-        return success
-
-    @staticmethod
-    def _sanitize_tool_call_args(tool_calls: List[NormalizedToolCall]) -> None:
-        for tc in tool_calls:
-            try:
-                json.loads(tc.arguments_json or "{}")
-            except (json.JSONDecodeError, TypeError):
-                tc.arguments_json = "{}"
-
     def _parse_arguments(self, args_json: str) -> tuple[Dict[str, Any], str | None]:
         try:
             return json.loads(args_json), None
+
         except json.JSONDecodeError as e:
             self.printer.parse_error(args_json)
             error_msg = f"Failed to parse tool arguments (invalid JSON): {str(e)}"
             return {}, error_msg
-
-    @staticmethod
-    def _truncate_tool_output(result: Any) -> str:
-        result_str = str(result)
-        if len(result_str) > MAX_TOOL_RESULT_CHARS:
-            result_str = result_str[:MAX_TOOL_RESULT_CHARS] + "... (truncated)"
-        return result_str
 
     def _accepts_hidden_clerk_id(self, func: Any) -> bool:
         cached = self._clerk_id_signature_cache.get(func)
@@ -249,9 +261,11 @@ class ToolHandler:
 
     def _execute_tool(self, name: str, args: Dict[str, Any]) -> Any:
         func = self.agent.tool_functions.get(name)
+
         if not func:
             error_msg = f"Tool '{name}' not found. Available: {list(self.agent.tool_functions.keys())}"
             self.printer.tool_error(error_msg)
+
             return error_response(error_msg)
 
         with self.observer.tool(name=name, args=args) as tool_span:
@@ -269,20 +283,9 @@ class ToolHandler:
                     if self._accepts_hidden_clerk_id(func):
                         execution_args["_clerk_id"] = self.agent.user_id
 
-                result = func(**execution_args) # This is where the tool is executed and the result is returned and stored in result
+                result = func(**execution_args)
 
-                is_tool_error = False
-
-                try:
-                    parsed = yaml.safe_load(result) if isinstance(result, str) else result
-
-                    if isinstance(parsed, dict) and parsed.get("success") is False:
-                        is_tool_error = True
-                
-                except Exception:
-                    pass
-
-                if is_tool_error:
+                if _tool_reported_failure(result):
                     tool_span.update(level="ERROR", output=result)
                 else:
                     tool_span.update(output=result)
@@ -292,29 +295,38 @@ class ToolHandler:
             except Exception as e:
                 error_msg = f"Error executing {name}: {str(e)}"
                 tool_span.update(level="ERROR", error=str(e), output={"error": error_msg})
-                
+
                 self.printer.tool_error(error_msg)
 
                 return error_response(error_msg)
 
-    def _add_tool_result(self, tool_call: NormalizedToolCall, result: Any, name: str, args: Dict[str, Any]) -> bool:
-        tool_validation = validate_tool_call(name, args, result, self.agent)
-        tool_validation_dict = yaml.safe_load(tool_validation)
+    def _add_tool_result(
+        self,
+        tool_call: NormalizedToolCall,
+        result: Any,
+        name: str,
+        args: Dict[str, Any],
+        *,
+        parallel: bool,
+    ) -> bool:
+        validation = validate_tool_result(name, args, result)
+        success = validation["success"]
 
-        success, _ = check_tool_success(tool_validation_dict)
-
-        self.printer.tool_result(name, result, success)
+        if parallel:
+            self.printer.parallel_tool_result(name, result, success)
+        else:
+            self.printer.tool_result(name, result, success)
 
         content = stringify_for_llm(result) if success else yaml.dump(
-            tool_validation_dict, 
-            default_flow_style=False, 
-            sort_keys=False
+            validation["payload"],
+            default_flow_style=False,
+            sort_keys=False,
         )
 
         self.agent.messages.append({
             "role": "tool",
             "tool_call_id": tool_call.id,
-            "content": content
+            "content": content,
         })
 
         return success

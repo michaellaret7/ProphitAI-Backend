@@ -1,5 +1,4 @@
 from contextlib import contextmanager
-from types import SimpleNamespace
 
 from prophitai_atlas.execution import ExecutionLoop, ToolHandler
 from prophitai_atlas.logging import AgentPrinter
@@ -101,7 +100,6 @@ class DummyAgent:
 def test_execution_loop_uses_observer_for_loop_and_iteration_spans():
     agent = DummyAgent()
     observer = RecordingObserver()
-    agent.tool_handler = SimpleNamespace(current_iteration=0)
 
     result = ExecutionLoop(agent, observer=observer).execute(message_id="msg-1")
 

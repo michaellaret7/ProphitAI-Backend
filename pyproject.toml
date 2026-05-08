@@ -13,6 +13,7 @@ dependencies = [
     "prophitai-api",
     "prophitai-fund",
     "prophitai-substack",
+    "prophitai-tax-harvester",
     "prophitai-jobs",
 ]
 
@@ -27,7 +28,6 @@ members = [
     "projects/api",
     "projects/fund",
     "projects/substack",
-    "projects/dreamer",
     "projects/tax_harvester",
     "infra/jobs",
 ]
@@ -43,7 +43,6 @@ prophitai-foundry = { workspace = true }
 prophitai-api = { workspace = true }
 prophitai-fund = { workspace = true }
 prophitai-substack = { workspace = true }
-prophitai-dreamer = { workspace = true }
 prophitai-tax-harvester = { workspace = true }
 prophitai-jobs = { workspace = true }
 
