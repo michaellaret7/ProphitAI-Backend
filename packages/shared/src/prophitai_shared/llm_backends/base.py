@@ -26,8 +26,16 @@ class LLMBackend(ABC, Generic[T]):
         messages: list[dict[str, Any]],
         tools: Optional[Sequence[dict[str, Any]]] = None,
         temperature: Optional[float] = None,
+        callback: Any = None,
+        message_id: Optional[str] = None,
     ) -> NormalizedLLMResponse:
-        """Send one LLM turn and normalize the response."""
+        """Send one LLM turn and normalize the response.
+
+        If `callback` is provided, the backend streams the response and fires
+        callback.on_text_delta(message_id, delta) as text chunks arrive. The
+        final assembled NormalizedLLMResponse is returned at stream end so the
+        ReAct loop can dispatch tool calls or finalize.
+        """
 
     @abstractmethod
     def call_llm_structured(

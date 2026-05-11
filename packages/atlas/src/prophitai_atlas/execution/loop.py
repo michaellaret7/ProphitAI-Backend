@@ -42,6 +42,9 @@ class ExecutionLoop:
             message_id = message_id or str(uuid.uuid4())
             callback = self.agent.chat_callback
 
+            self._current_message_id = message_id
+            self._current_callback = callback
+
             tool_calls_made: List[str] = []
             assistant_text = ""
             iteration_tokens = 0
@@ -166,12 +169,14 @@ class ExecutionLoop:
                 raise
 
     def call_llm(self) -> NormalizedLLMResponse:
-        """Make LLM API call."""
+        """Make LLM API call. Streams text deltas through the agent's callback."""
 
         return self.agent.backend.call_llm(
             messages=self.agent.messages,
             tools=self.agent.tools if self.agent.tools else None,
             temperature=self.agent.temperature,
+            callback=getattr(self, "_current_callback", None),
+            message_id=getattr(self, "_current_message_id", None),
         )
 
     def _track_token_usage(self, response: NormalizedLLMResponse) -> int:

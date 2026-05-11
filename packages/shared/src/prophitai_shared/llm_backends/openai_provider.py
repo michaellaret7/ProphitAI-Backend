@@ -50,32 +50,90 @@ class OpenAICompatibleBackend(LLMBackend[T]):
         messages: list[dict[str, Any]],
         tools: Optional[Sequence[dict[str, Any]]] = None,
         temperature: Optional[float] = None,
+        callback: Any = None,
+        message_id: Optional[str] = None,
     ) -> NormalizedLLMResponse:
-        """Send one OpenAI chat completion and normalize the response."""
-        response = self.raw_client.chat.completions.create(
+        """Send one OpenAI chat completion and normalize the response.
+
+        Always streams under the hood so callers receiving a `callback` see
+        text deltas in real time. The final assembled response shape matches
+        the non-streaming path so the ReAct loop is agnostic.
+        """
+        stream = self.raw_client.chat.completions.create(
             model=self.model,
             messages=_to_openai_messages(messages),
             tools=self.format_tools(tools) if tools else None,
             tool_choice="auto" if tools else None,
             temperature=temperature,
+            stream=True,
+            stream_options={"include_usage": True},
         )
 
-        message = response.choices[0].message
+        text_parts: list[str] = []
+        tool_shards: dict[int, dict[str, Any]] = {}
+        finish_reason = ""
+        usage_obj: Any = None
+
+        for chunk in stream:
+            if getattr(chunk, "usage", None) is not None:
+                usage_obj = chunk.usage
+
+            if not chunk.choices:
+                continue
+
+            choice = chunk.choices[0]
+            delta = getattr(choice, "delta", None)
+
+            if getattr(choice, "finish_reason", None):
+                finish_reason = choice.finish_reason
+
+            if delta is None:
+                continue
+
+            content = getattr(delta, "content", None)
+
+            if content:
+                text_parts.append(content)
+
+                if callback is not None:
+                    callback.on_text_delta(message_id or "", content)
+
+            for shard in getattr(delta, "tool_calls", None) or []:
+                index = shard.index
+                bucket = tool_shards.setdefault(
+                    index,
+                    {"id": "", "name": "", "arguments": ""},
+                )
+
+                if shard.id:
+                    bucket["id"] = shard.id
+
+                function = getattr(shard, "function", None)
+
+                if function is None:
+                    continue
+
+                if getattr(function, "name", None):
+                    bucket["name"] = function.name
+
+                if getattr(function, "arguments", None):
+                    bucket["arguments"] += function.arguments
+
         tool_calls = [
             NormalizedToolCall(
-                id=tool_call.id,
-                name=tool_call.function.name,
-                arguments_json=tool_call.function.arguments or "{}",
+                id=bucket["id"],
+                name=bucket["name"],
+                arguments_json=bucket["arguments"] or "{}",
             )
-            for tool_call in (message.tool_calls or [])
+            for _, bucket in sorted(tool_shards.items())
         ]
 
         return NormalizedLLMResponse(
-            assistant_text=message.content or "",
+            assistant_text="".join(text_parts),
             tool_calls=tool_calls,
-            stop_reason=getattr(response.choices[0], "finish_reason", "") or "",
-            usage=_normalize_openai_usage(getattr(response, "usage", None)),
-            raw_response=response,
+            stop_reason=finish_reason or "",
+            usage=_normalize_openai_usage(usage_obj),
+            raw_response=None,
         )
 
     def call_llm_structured(

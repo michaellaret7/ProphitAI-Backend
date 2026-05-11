@@ -54,8 +54,16 @@ class AnthropicBackend(LLMBackend[T]):
         messages: list[dict[str, Any]],
         tools: Optional[Sequence[dict[str, Any]]] = None,
         temperature: Optional[float] = None,
+        callback: Any = None,
+        message_id: Optional[str] = None,
     ) -> NormalizedLLMResponse:
-        """Send one Anthropic message turn and normalize the response."""
+        """Send one Anthropic message turn and normalize the response.
+
+        Always streams under the hood. When a `callback` is provided, fires
+        callback.on_text_delta(message_id, delta) as text chunks arrive. The
+        SDK's get_final_message() yields the same fully-assembled Message the
+        non-streaming endpoint would have returned.
+        """
 
         system_blocks, anthropic_messages = _to_anthropic_messages(messages)
         formatted_tools = self.format_tools(tools) if tools else None
@@ -69,18 +77,30 @@ class AnthropicBackend(LLMBackend[T]):
             if bp_count >= 3:
                 print(f"[CacheWarning] {bp_count} explicit breakpoints + auto-BP = {bp_count + 1} total (limit: 4)")
 
-        response = self.raw_client.messages.create(
-            **_compact_kwargs(
-                model=self.model,
-                cache_control=dict(CACHE_CONTROL_EPHEMERAL) if ANTHROPIC_CACHING_ENABLED else None,
-                system=system_blocks or None,
-                messages=anthropic_messages,
-                tools=formatted_tools,
-                temperature=temperature,
-                # thinking={"type": "adaptive"},
-                max_tokens=21000,
-            )
+        stream_kwargs = _compact_kwargs(
+            model=self.model,
+            cache_control=dict(CACHE_CONTROL_EPHEMERAL) if ANTHROPIC_CACHING_ENABLED else None,
+            system=system_blocks or None,
+            messages=anthropic_messages,
+            tools=formatted_tools,
+            temperature=temperature,
+            max_tokens=21000,
         )
+
+        with self.raw_client.messages.stream(**stream_kwargs) as stream:
+            for event in stream:
+                if event.type != "content_block_delta":
+                    continue
+
+                delta = event.delta
+
+                if getattr(delta, "type", None) == "text_delta":
+                    text = getattr(delta, "text", "") or ""
+
+                    if text and callback is not None:
+                        callback.on_text_delta(message_id or "", text)
+
+            response = stream.get_final_message()
 
         assistant_text = []
         tool_calls: list[NormalizedToolCall] = []

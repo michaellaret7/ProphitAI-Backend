@@ -4,6 +4,7 @@ Provides protocols for receiving notifications when agent state changes,
 enabling real-time streaming to frontends via WebSocket or other mechanisms.
 """
 
+import sys
 from typing import Any, Dict, List, Protocol
 
 from prophitai_atlas.utils.truncation import truncate_for_display
@@ -47,6 +48,9 @@ class ChatCallback(Protocol):
         success: bool,
         duration_ms: int,
     ) -> None:
+        ...
+
+    def on_text_delta(self, message_id: str, delta: str) -> None:
         ...
 
     def on_run_finished(
@@ -104,6 +108,9 @@ class NoOpChatCallback:
     ) -> None:
         pass
 
+    def on_text_delta(self, message_id: str, delta: str) -> None:
+        pass
+
     def on_run_finished(
         self,
         answer: str,
@@ -122,6 +129,59 @@ class NoOpChatCallback:
 
     def on_plan_updated(self, plan: Any) -> None:
         pass
+
+
+class ConsoleStreamCallback(NoOpChatCallback):
+    """Prints streaming text deltas to stdout. Useful for terminal REPLs/tests.
+
+    Inherits no-op implementations for every other callback hook so only the
+    relevant terminal-friendly events are overridden.
+    """
+
+    def __init__(self) -> None:
+        self._streaming = False
+
+    def on_text_delta(self, message_id: str, delta: str) -> None:
+        if not self._streaming:
+            sys.stdout.write("\nassistant: ")
+            self._streaming = True
+
+        sys.stdout.write(delta)
+        sys.stdout.flush()
+
+    def on_tool_call_start(self, tool_call_id: str, tool_name: str,
+                           arguments: Dict[str, Any], iteration: int) -> None:
+        self._flush_line()
+        sys.stdout.write(f"\n[tool] {tool_name} ...")
+        sys.stdout.flush()
+
+    def on_tool_call_result(self, tool_call_id: str, tool_name: str,
+                            result: Any, success: bool, duration_ms: int) -> None:
+        status = "ok" if success else "fail"
+        sys.stdout.write(f" [{status} in {duration_ms}ms]\n")
+        sys.stdout.flush()
+
+    def on_run_finished(self, answer: str, tool_calls_made: List[str],
+                        iterations: int, tokens_used: int, stop_reason: str) -> None:
+        self._flush_line()
+        sys.stdout.write(
+            f"\n[done] iterations={iterations} tokens={tokens_used} stop={stop_reason}\n"
+        )
+        sys.stdout.flush()
+
+    def on_run_error(self, error: str) -> None:
+        self._flush_line()
+        sys.stdout.write(f"\n[error] {error}\n")
+        sys.stdout.flush()
+
+    def reset(self) -> None:
+        """Call between turns so the next stream re-prints the 'assistant:' prefix."""
+        self._streaming = False
+
+    def _flush_line(self) -> None:
+        if self._streaming:
+            sys.stdout.write("\n")
+            self._streaming = False
 
 
 class WorkerCallbackWrapper:
@@ -170,6 +230,18 @@ class WorkerCallbackWrapper:
 
     def on_iteration_end(self, iteration: int, tokens_used: int) -> None:
         self._send("worker_iteration_end", {"iteration": iteration, "tokens_used": tokens_used})
+
+    def on_text_delta(self, message_id: str, delta: str) -> None:
+        # Reason: route deltas through the inner callback's non-blocking sender
+        # so the agent thread doesn't stall on every token.
+        if hasattr(self._inner, "_send_nowait"):
+            self._inner._send_nowait("worker_text_delta", {
+                "message_id": message_id,
+                "delta": delta,
+                "task_id": self._task_id,
+                "worker_id": self._worker_id,
+                "plan_task_id": self._plan_task_id,
+            })
 
     # --- Events we suppress (orchestrator already handles these) ---
 

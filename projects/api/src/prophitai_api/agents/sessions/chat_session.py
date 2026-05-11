@@ -210,11 +210,10 @@ class WebSocketChatCallback:
         self._loop = loop
 
     def _send(self, event_type: str, payload: dict) -> None:
-        """Send a message via the connection manager (thread-safe).
+        """Send a message via the connection manager (thread-safe, blocking).
 
-        Args:
-            event_type: The type of event to send.
-            payload: The event payload.
+        Use for lifecycle/tool events where ordering and delivery confirmation
+        matter. Blocks the calling thread until the WebSocket send completes.
         """
         async def _send_async():
             await connection_manager.send_message(self.session_id, event_type, payload)
@@ -222,6 +221,21 @@ class WebSocketChatCallback:
         try:
             future = asyncio.run_coroutine_threadsafe(_send_async(), self._loop)
             future.result(timeout=5.0)
+        except Exception:
+            pass  # Connection may be closed, fail silently
+
+    def _send_nowait(self, event_type: str, payload: dict) -> None:
+        """Send a message without blocking the agent thread.
+
+        Reason: token-stream deltas fire ~50 times/sec. Blocking on every one
+        would make streaming slower than non-streaming. Fire-and-forget keeps
+        the agent thread free to consume the next SDK chunk.
+        """
+        async def _send_async():
+            await connection_manager.send_message(self.session_id, event_type, payload)
+
+        try:
+            asyncio.run_coroutine_threadsafe(_send_async(), self._loop)
         except Exception:
             pass  # Connection may be closed, fail silently
 
@@ -256,6 +270,13 @@ class WebSocketChatCallback:
             "tool_name": tool_name,
             "arguments": arguments,
             "iteration": iteration,
+        })
+
+    def on_text_delta(self, message_id: str, delta: str) -> None:
+        """Stream a text chunk to the frontend as it arrives from the LLM."""
+        self._send_nowait("text_delta", {
+            "message_id": message_id,
+            "delta": delta,
         })
 
     def on_tool_call_result(
