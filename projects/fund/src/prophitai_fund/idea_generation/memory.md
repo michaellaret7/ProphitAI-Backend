@@ -31,21 +31,21 @@ date: 2026-04-13
 title: Direct tool calls beat workers for multi-signal exploration
 topic: tool_usage
 ---
-For fundamentals-based quarterly strategies with 3-4 candidate signals, 8-10 direct strategy_research + theory_research + macro_research + llm_web_search calls sequentially (without workers) is efficient and allows dynamic query pivoting based on early results. Workers are better when 6+ queries must be pre-specified before any results arrive. When first 2-3 queries confirm a direction strongly, direct calls let you immediately follow up with targeted disconfirming queries — workers cannot pivot adaptively.
+For fundamentals-based quarterly strategies with 3-4 candidate signals, 8-10 direct strategy_research + theory_research + macro_research + web_search calls sequentially (without workers) is efficient and allows dynamic query pivoting based on early results. Workers are better when 6+ queries must be pre-specified before any results arrive. When first 2-3 queries confirm a direction strongly, direct calls let you immediately follow up with targeted disconfirming queries — workers cannot pivot adaptively.
 
 ---
 date: 2026-04-13
-title: Pivot to llm_web_search when research DB returns the same paper cluster
+title: Pivot to web_search when research DB returns the same paper cluster
 topic: tool_usage
 ---
-When strategy_research or theory_research repeatedly returns the same paper cluster for distinct queries (commonly V/P valuation papers, accruals papers, or generic momentum papers), immediately switch to llm_web_search with more targeted academic queries (specific author-year citations). The research DBs are strong on foundational momentum, factor models, BAB/low-vol, and volatility topics but thin on capital-structure, intangible-capital, event-driven, and specific behavioral-anomaly topics.
+When strategy_research or theory_research repeatedly returns the same paper cluster for distinct queries (commonly V/P valuation papers, accruals papers, or generic momentum papers), immediately switch to web_search with more targeted academic queries (specific author-year citations). The research DBs are strong on foundational momentum, factor models, BAB/low-vol, and volatility topics but thin on capital-structure, intangible-capital, event-driven, and specific behavioral-anomaly topics.
 
 ---
 date: 2026-04-14
 title: Research DB gaps requiring immediate web-search pivot
 topic: tool_usage
 ---
-The strategy_research and theory_research DBs return V/P valuation and generic momentum papers for the following signal families and should be skipped after 1 confirmatory query. Go directly to llm_web_search with specific author-year queries for: shareholder yield / buybacks / net share issuance (Pontiff-Woodgate), working-capital / CCC (Aktas-Croci), R&D intensity / intangibles (Leung-Mazouz-Evans), CMA / asset growth / investment factor (Cooper-Gulen-Schill, Titman-Wei-Xie, Fama-French CMA post-2013), lottery / MAX / IVOL / skewness (Bali-Cakici-Whitelaw, Bali-Brown-Murray-Tang, Π-CAPM), Frog-in-the-Pan / information discreteness (Da-Gurun-Warachka), PEAD / SUE / earnings surprise (Chordia-Goyal-Sadka, Garfinkel-Hribar-Hsiao, Subrahmanyam, Jegadeesh-Livnat), earnings announcement premium / EAP (Frazzini-Lamont, Barber-De George-Lehavy-Trueman, Savor-Wilson), residual momentum (Blitz-Huij-Martens, Chaves, Huij-Lansdorp), and analyst forecast dispersion (Diether-Malloy-Scherbina). For BAB / CAPM / leverage constraints, the theory_research DB indexes Frazzini-Pedersen directly with good mechanism quotes — query it first. Going to web search early on these topics saves 3-4 wasted DB queries per session.
+The strategy_research and theory_research DBs return V/P valuation and generic momentum papers for the following signal families and should be skipped after 1 confirmatory query. Go directly to web_search with specific author-year queries for: shareholder yield / buybacks / net share issuance (Pontiff-Woodgate), working-capital / CCC (Aktas-Croci), R&D intensity / intangibles (Leung-Mazouz-Evans), CMA / asset growth / investment factor (Cooper-Gulen-Schill, Titman-Wei-Xie, Fama-French CMA post-2013), lottery / MAX / IVOL / skewness (Bali-Cakici-Whitelaw, Bali-Brown-Murray-Tang, Π-CAPM), Frog-in-the-Pan / information discreteness (Da-Gurun-Warachka), PEAD / SUE / earnings surprise (Chordia-Goyal-Sadka, Garfinkel-Hribar-Hsiao, Subrahmanyam, Jegadeesh-Livnat), earnings announcement premium / EAP (Frazzini-Lamont, Barber-De George-Lehavy-Trueman, Savor-Wilson), residual momentum (Blitz-Huij-Martens, Chaves, Huij-Lansdorp), and analyst forecast dispersion (Diether-Malloy-Scherbina). For BAB / CAPM / leverage constraints, the theory_research DB indexes Frazzini-Pedersen directly with good mechanism quotes — query it first. Going to web search early on these topics saves 3-4 wasted DB queries per session.
 
 ---
 date: 2026-04-16
@@ -87,7 +87,7 @@ date: 2026-04-17
 title: Nagel 2012 research path for mean-reversion strategy design
 topic: tool_usage
 ---
-For mean-reversion strategies: theory_research for Nagel 2012 liquidity-provision framework (DB has strong Brunnermeier-Pedersen coverage) + llm_web_search for Connors RSI-2 practitioner specs + llm_web_search for Khandani-Lo 2011 cost-aware reversal + llm_web_search for Avellaneda-Lee 2010 ETF stat-arb Sharpe numbers. DB is WEAK on practitioner reversal and backtest numbers but STRONG on the theoretical liquidity-provision mechanism. Complete thesis achievable in 6 queries.
+For mean-reversion strategies: theory_research for Nagel 2012 liquidity-provision framework (DB has strong Brunnermeier-Pedersen coverage) + web_search for Connors RSI-2 practitioner specs + web_search for Khandani-Lo 2011 cost-aware reversal + web_search for Avellaneda-Lee 2010 ETF stat-arb Sharpe numbers. DB is WEAK on practitioner reversal and backtest numbers but STRONG on the theoretical liquidity-provision mechanism. Complete thesis achievable in 6 queries.
 
 ---
 date: 2026-04-17
@@ -114,7 +114,7 @@ date: 2026-04-17
 title: Real-money ETF performance data is the single most useful disconfirming evidence
 topic: tool_usage
 ---
-When researching factor-based equity strategies, llm_web_search for the corresponding real-money ETF (SYLD for shareholder yield, MTUM for momentum, QUAL for quality, etc.) performance over the most recent 1-3 years yields more useful disconfirming evidence than academic decay papers. Real ETFs reveal current crowding, narrow-market underperformance patterns, and timing-skill failures that academic papers don't capture. Two queries that work well: (1) '[ETF ticker] underperformance [recent year] versus S&P 500 [reason]' and (2) '[factor name] strategy weakness during [current dominant theme]'. This single check materially improved the design by exposing the 2024-25 buyback-timing failure that motivated the valuation gate addition.
+When researching factor-based equity strategies, web_search for the corresponding real-money ETF (SYLD for shareholder yield, MTUM for momentum, QUAL for quality, etc.) performance over the most recent 1-3 years yields more useful disconfirming evidence than academic decay papers. Real ETFs reveal current crowding, narrow-market underperformance patterns, and timing-skill failures that academic papers don't capture. Two queries that work well: (1) '[ETF ticker] underperformance [recent year] versus S&P 500 [reason]' and (2) '[factor name] strategy weakness during [current dominant theme]'. This single check materially improved the design by exposing the 2024-25 buyback-timing failure that motivated the valuation gate addition.
 
 ---
 date: 2026-04-17
@@ -135,7 +135,7 @@ date: 2026-04-20
 title: Dispersion regime gate is the key novelty for reversal strategies in 2026
 topic: tool_usage
 ---
-For reversal-family strategy research in April 2026, the single most valuable web query was 'short term reversal cross-sectional dispersion relationship high dispersion regime stronger alpha'. Returned a direct empirical finding: high-IDR regimes produce approximately 45 percent annualized performance difference for reversal strategies, dispersion outperforms VIX as opportunity indicator. Combined with Goldman 2026-01 data showing SPX dispersion at 97th percentile 4y lookback, this produced a compelling regime-conditioning angle that would not have been found via strategy_research or theory_research DBs. Pattern: when strategy has a natural regime-conditioning story, one targeted llm_web_search query on 'X strategy + regime state + dispersion' is worth three DB queries.
+For reversal-family strategy research in April 2026, the single most valuable web query was 'short term reversal cross-sectional dispersion relationship high dispersion regime stronger alpha'. Returned a direct empirical finding: high-IDR regimes produce approximately 45 percent annualized performance difference for reversal strategies, dispersion outperforms VIX as opportunity indicator. Combined with Goldman 2026-01 data showing SPX dispersion at 97th percentile 4y lookback, this produced a compelling regime-conditioning angle that would not have been found via strategy_research or theory_research DBs. Pattern: when strategy has a natural regime-conditioning story, one targeted web_search query on 'X strategy + regime state + dispersion' is worth three DB queries.
 
 ---
 date: 2026-04-20
@@ -163,14 +163,14 @@ date: 2026-04-20
 title: VIX commodity tool and macro_indicators confirm Daniel-Moskowitz bear indicator state
 topic: tool_usage
 ---
-For momentum strategies needing the Daniel-Moskowitz bear-market indicator (trailing 2-year SPX return negative) and ex-ante variance, three tools together give a complete current-regime snapshot in parallel: commodity_prices VIXUSD for recent vol (60 days), macro_research_search for the "trailing 2-year SPX return" narrative from providers, and BNP/Citi regime clustering notes. April 2026 snapshot: bull market since October 2022 per BNP Paribas 2026 outlook confirms I_B = 0, VIX spiked 31.05 on 3/27/2026 then back to 24-25 range, indicates intermediate variance not panic. Skip llm_web_search for "current momentum regime" queries — Perplexity returns generic framing; the macro_research_search DB has the JPMorgan/Citi/BNP specific numbers needed.
+For momentum strategies needing the Daniel-Moskowitz bear-market indicator (trailing 2-year SPX return negative) and ex-ante variance, three tools together give a complete current-regime snapshot in parallel: commodity_prices VIXUSD for recent vol (60 days), macro_research_search for the "trailing 2-year SPX return" narrative from providers, and BNP/Citi regime clustering notes. April 2026 snapshot: bull market since October 2022 per BNP Paribas 2026 outlook confirms I_B = 0, VIX spiked 31.05 on 3/27/2026 then back to 24-25 range, indicates intermediate variance not panic. Skip web_search for "current momentum regime" queries — Perplexity returns generic framing; the macro_research_search DB has the JPMorgan/Citi/BNP specific numbers needed.
 
 ---
 date: 2026-04-20
 title: Web search for George-Hwang 52-week-high beats DB for proximity-momentum research
 topic: tool_usage
 ---
-The strategy_research and theory_research DBs return generic Jegadeesh-Titman and Value-Momentum-Everywhere paper clusters when querying George-Hwang 2004 52-week-high momentum. Go directly to llm_web_search with specific author-year queries (George Hwang 2004, Barroso-Wang 2021, Novy-Marx 2012 echo) for proximity-momentum, intermediate-horizon echo, and anchoring-bias behavioral papers. The research DBs have deep coverage of momentum crashes (Daniel-Moskowitz 2016, Barroso-Santa-Clara 2015) and Value-Momentum-Everywhere (Asness-Moskowitz-Pedersen 2013) but thin coverage of the proximity-anchoring and echo-effect sub-literatures. Pattern confirmed: for well-known but sub-topical papers, go to web search directly after one confirmatory DB query.
+The strategy_research and theory_research DBs return generic Jegadeesh-Titman and Value-Momentum-Everywhere paper clusters when querying George-Hwang 2004 52-week-high momentum. Go directly to web_search with specific author-year queries (George Hwang 2004, Barroso-Wang 2021, Novy-Marx 2012 echo) for proximity-momentum, intermediate-horizon echo, and anchoring-bias behavioral papers. The research DBs have deep coverage of momentum crashes (Daniel-Moskowitz 2016, Barroso-Santa-Clara 2015) and Value-Momentum-Everywhere (Asness-Moskowitz-Pedersen 2013) but thin coverage of the proximity-anchoring and echo-effect sub-literatures. Pattern confirmed: for well-known but sub-topical papers, go to web search directly after one confirmatory DB query.
 
 ---
 date: 2026-04-20
@@ -191,7 +191,7 @@ date: 2026-04-21
 title: Citi Thematic Equity Strategy macro DB has named factor-basket tickers
 topic: tool_usage
 ---
-The macro_research_search DB indexes Citi's Thematic Equity Strategy report with named factor-basket tickers (CGRBLBRP large-cap beat-and-raise, CGRBSBRP SMID beat-and-raise, CGRBGROE positive ROE trend, CGRBBROE negative ROE trend, CGRBEPSS EPS Sharpe) and live 2025-26 performance attribution. Single query pattern that works: 'Current US equity market regime [year] momentum factor performance earnings growth dispersion cross-sectional opportunity'. This is the best source for real-money-basket disconfirming evidence on factor strategies when llm_web_search returns generic 2010s decay commentary. Saves the llm_web_search step for factor-basket performance that memory entry 2026-04-17 recommended.
+The macro_research_search DB indexes Citi's Thematic Equity Strategy report with named factor-basket tickers (CGRBLBRP large-cap beat-and-raise, CGRBSBRP SMID beat-and-raise, CGRBGROE positive ROE trend, CGRBBROE negative ROE trend, CGRBEPSS EPS Sharpe) and live 2025-26 performance attribution. Single query pattern that works: 'Current US equity market regime [year] momentum factor performance earnings growth dispersion cross-sectional opportunity'. This is the best source for real-money-basket disconfirming evidence on factor strategies when web_search returns generic 2010s decay commentary. Saves the web_search step for factor-basket performance that memory entry 2026-04-17 recommended.
 
 ---
 date: 2026-04-21
@@ -205,7 +205,7 @@ date: 2026-04-21
 title: Real-money factor ETF concentration data disconfirms simple momentum designs
 topic: tool_usage
 ---
-Single llm_web_search query on MTUM 2024-2025 performance revealed the 40 percent TMT concentration problem that unconstrained cross-sectional momentum creates in the current AI-dominated regime. This disconfirming evidence directly shaped the design — adding a top-3/bottom-3 sector cap instead of unconstrained cross-sectional ranking. Pattern confirmed from 2026-04-17 memory: real-money factor ETF performance is the single highest-signal disconfirming evidence for factor-strategy designs. Before finalizing any momentum, quality, low-vol, value, or shareholder-yield strategy, query the corresponding major ETF (MTUM, QUAL, USMV, SPYV, SYLD, etc) for 1-3 year recent performance and concentration risks.
+Single web_search query on MTUM 2024-2025 performance revealed the 40 percent TMT concentration problem that unconstrained cross-sectional momentum creates in the current AI-dominated regime. This disconfirming evidence directly shaped the design — adding a top-3/bottom-3 sector cap instead of unconstrained cross-sectional ranking. Pattern confirmed from 2026-04-17 memory: real-money factor ETF performance is the single highest-signal disconfirming evidence for factor-strategy designs. Before finalizing any momentum, quality, low-vol, value, or shareholder-yield strategy, query the corresponding major ETF (MTUM, QUAL, USMV, SPYV, SYLD, etc) for 1-3 year recent performance and concentration risks.
 
 ---
 date: 2026-04-21
@@ -233,7 +233,7 @@ date: 2026-04-22
 title: Intraday strategy research requires immediate web-search pivot for specific papers
 topic: tool_usage
 ---
-strategy_research and theory_research DBs are THIN on intraday-specific literature. Queries for Heston-Korajczyk-Sadka 2010, Gao-Han-Li-Zhou 2018, Lou-Polk-Skouras 2019 return generic cross-sectional momentum papers (Jegadeesh-Titman, AQR Value-Momentum-Everywhere) and occasionally an arxiv HMM intraday futures paper. Go directly to llm_web_search with specific author-year queries after 1 confirmatory DB query. Effective pattern: one DB query confirms the momentum literature baseline, then 5-6 llm_web_search queries targeting specific intraday papers and real-world implementations (opening-range breakout on SPY, MTUM narrow-market underperformance). llm_web_search returned usable Sharpe/return figures for real-world SPY opening-range strategies (high-teens annualized net of costs, 2007-2024) that no DB could produce. Add intraday momentum to the list of DB-weak topics in my 2026-04-14 memory alongside shareholder yield, asset growth, analyst dispersion, and lottery/IVOL.
+strategy_research and theory_research DBs are THIN on intraday-specific literature. Queries for Heston-Korajczyk-Sadka 2010, Gao-Han-Li-Zhou 2018, Lou-Polk-Skouras 2019 return generic cross-sectional momentum papers (Jegadeesh-Titman, AQR Value-Momentum-Everywhere) and occasionally an arxiv HMM intraday futures paper. Go directly to web_search with specific author-year queries after 1 confirmatory DB query. Effective pattern: one DB query confirms the momentum literature baseline, then 5-6 web_search queries targeting specific intraday papers and real-world implementations (opening-range breakout on SPY, MTUM narrow-market underperformance). web_search returned usable Sharpe/return figures for real-world SPY opening-range strategies (high-teens annualized net of costs, 2007-2024) that no DB could produce. Add intraday momentum to the list of DB-weak topics in my 2026-04-14 memory alongside shareholder yield, asset growth, analyst dispersion, and lottery/IVOL.
 
 ---
 date: 2026-04-22

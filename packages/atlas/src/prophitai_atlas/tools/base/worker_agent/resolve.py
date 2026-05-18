@@ -2,10 +2,10 @@
 
 from typing import Callable, Dict, Iterable, List
 
-# Reason: These tools are either built-in to WorkerAgent (write_note, llm_web_search)
+# Reason: These tools are either built-in to WorkerAgent (write_note, web_search)
 # or orchestrator-only meta-tools (register_tools). LLMs hallucinate them into
 # worker tool lists, so we silently drop them instead of erroring.
-WORKER_BUILTIN_TOOLS = frozenset({"write_note", "llm_web_search", "register_tools"})
+WORKER_BUILTIN_TOOLS = frozenset({"write_note", "web_search", "register_tools"})
 
 
 def resolve_tools_by_name(
@@ -17,7 +17,7 @@ def resolve_tools_by_name(
     Builds a name -> callable lookup from the full tool list, then resolves
     each requested name. Unknown tool names are silently dropped — LLMs
     sometimes hallucinate tool names that don't exist in the registry.
-    Tools already built into WorkerAgent (write_note, llm_web_search) and
+    Tools already built into WorkerAgent (write_note, web_search) and
     orchestrator-only tools (register_tools) are also silently dropped.
 
     Args:

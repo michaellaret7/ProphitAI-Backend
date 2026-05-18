@@ -27,7 +27,7 @@ from prophitai_atlas.tools.base.register_tools import (
 
 from .base import AgentBase
 from prophitai_atlas.tools.base import (
-    llm_web_search,
+    web_search,
     RETRIEVE_NOTES_TOOL,
     retrieve_notes,
     UPDATE_PLAN_TOOL,
@@ -112,7 +112,7 @@ class Agent(AgentBase):
         self.system_prompt: str = system_prompt
 
         # --- Add the built-in tools ---
-        self.add_tool(**llm_web_search.tool)
+        self.add_tool(**web_search.tool)
 
         self.add_tool(
             **RETRIEVE_NOTES_TOOL,

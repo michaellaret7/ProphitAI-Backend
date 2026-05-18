@@ -12,7 +12,7 @@ dependencies = [
     "langfuse",
     "python-dotenv",
     "opentelemetry-api",
-    "perplexityai",
+    "requests",
 ]
 
 [project.optional-dependencies]

@@ -2,7 +2,7 @@
 
 from .think import think
 from .calculator import calculator
-from .search_engine import llm_web_search
+from .web_search import web_search
 
 # Worker tools
 from .worker_agent import (
@@ -20,7 +20,7 @@ from .update_plan import update_plan, UPDATE_PLAN_TOOL
 __all__ = [
     "think",
     "calculator",
-    "llm_web_search",
+    "web_search",
     # Worker
     "DEPLOY_SCOPED_WORKER_TOOL",
     "deploy_scoped_worker",

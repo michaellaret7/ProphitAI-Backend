@@ -455,7 +455,7 @@ Minor change, but consistent and low-risk.
 
 ## 5. What NOT to Centralize
 
-### 5.1 `llm_web_search` registration
+### 5.1 `web_search` registration
 
 `Agent` and `WorkerAgent` both register it, but `PlannerAgent` intentionally does not. This should remain local or be controlled by an explicit opt-in flag later.
 

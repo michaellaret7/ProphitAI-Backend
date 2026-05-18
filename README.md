@@ -72,7 +72,7 @@ backend_restructure/
 │   │           │   ├── decorator.py  # @agent_tool decorator
 │   │           │   ├── catalogue.py  # Tool discovery and grouping
 │   │           │   ├── responses.py  # Tool response models
-│   │           │   └── base/         # think, calculator, search_engine, update_plan, worker
+│   │           │   └── base/         # think, calculator, web_search, update_plan, worker
 │   │           ├── models/           # Agent response, callbacks, chat, events, defaults
 │   │           ├── prompts/          # base, planner, worker, plan_injection
 │   │           ├── evaluation/       # Agent evaluation

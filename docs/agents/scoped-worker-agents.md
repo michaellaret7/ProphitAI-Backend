@@ -76,7 +76,7 @@ class WorkerAgent(AgentBase):
 
 - `tools` — list of @agent_tool-decorated callables, registered via `self.add_tool(**func.tool)`
 - `system_prompt` — if set, used with date appended. If None, falls back to `build_worker_system_prompt()`
-- Built-in tools always present: `write_note`, `llm_web_search`, `calculator`
+- Built-in tools always present: `write_note`, `web_search`, `calculator`
 - No deferred tools, no `register_tools`
 
 ### WorkerSpec Dataclass

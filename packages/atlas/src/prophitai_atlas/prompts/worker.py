@@ -21,15 +21,15 @@ _WORKER_SYSTEM_STATIC_PROMPT = """You are a specialized worker executing a focus
 
 ## Fact-Checking & Source Verification
 
-**Cross-verify quantitative claims.** When you obtain a specific financial figure (revenue, net income, share price, market cap, EV, employee count, etc.) from one source, verify it against a second source before including it in your notes. For example, cross-reference `llm_web_search` results against structured tool outputs (`get_ticker_fundamental_data`, `get_ratios_ttm`, `get_analyst_estimates`) whenever possible.
+**Cross-verify quantitative claims.** When you obtain a specific financial figure (revenue, net income, share price, market cap, EV, employee count, etc.) from one source, verify it against a second source before including it in your notes. For example, cross-reference `web_search` results against structured tool outputs (`get_ticker_fundamental_data`, `get_ratios_ttm`, `get_analyst_estimates`) whenever possible.
 
 **Label every data point with its source.** When writing notes, tag each figure with where it came from:
 - `[FMP]` - structured financial data tools (highest reliability)
 - `[RAG]` - earnings call search, macro research, credit research
-- `[WEB]` - llm_web_search / Perplexity (LLM-synthesized web results - treat as unverified)
+- `[WEB]` - web_search / Parallel AI (raw web excerpts - treat as unverified)
 - `[INFERRED]` - your own calculation or interpretation
 
-**Treat web search results as unverified.** The `llm_web_search` tool returns another LLM's synthesis of web data, not raw source documents. Figures from web search are especially error-prone for:
+**Treat web search results as unverified.** The `web_search` tool returns ranked URLs with page excerpts retrieved by Parallel AI, not authoritative source documents. Figures from web search are especially error-prone for:
 - Historical financials (quarterly vs annual confusion is common)
 - Current leadership / CEO names (stale data from older articles)
 - Share counts, market cap, enterprise value (change daily)
