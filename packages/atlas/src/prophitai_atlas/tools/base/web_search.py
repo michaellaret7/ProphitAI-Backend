@@ -1,16 +1,20 @@
-"""Web search via the Parallel AI Search API.
+"""Web search via the Parallel Search API (GA v1).
 
-Posts to https://api.parallel.ai/v1beta/search and returns ranked URLs with
+Posts to https://api.parallel.ai/v1/search and returns ranked URLs with
 extended excerpts, formatted as plain text for direct LLM consumption.
+Pair with `web_extract` when an excerpt isn't enough and the model needs
+the full page.
 """
 
 from __future__ import annotations
 
 import os
-from typing import Annotated, Literal
+import uuid
+from typing import Annotated, Literal, Optional
 
 import requests
 
+from prophitai_atlas.models.defaults import DEFAULT_MODEL
 from prophitai_atlas.tools.decorator import Param, agent_tool
 from prophitai_atlas.tools.responses import error_response, success_response
 
@@ -19,10 +23,10 @@ from prophitai_atlas.tools.responses import error_response, success_response
 # --> Constants
 # ================================
 
-# Reason: /v1/search rejects processor/max_results/max_chars_per_result; /v1beta accepts them.
-ENDPOINT = "https://api.parallel.ai/v1beta/search"
+ENDPOINT = "https://api.parallel.ai/v1/search"
+CLIENT_MODEL = DEFAULT_MODEL
 
-# Reason: 'pro' processor can take 15-60s.
+# Reason: 'advanced' mode can take 15-60s end-to-end.
 DEFAULT_TIMEOUT = 90
 
 MAX_OUTPUT_CHARS = 16000
@@ -61,37 +65,64 @@ def _format_results(results: list[dict]) -> str:
 
 @agent_tool(name="web_search")
 def web_search(
-    objective: Annotated[str, Param(description="Natural-language description of what information you are seeking.")],
-    search_queries: Annotated[list[str], Param(description="Keyword queries to dispatch in parallel.")],
-    processor: Annotated[Literal["base", "pro"], Param(description="Search tier. 'base' is fast/cheap (2-5s); 'pro' is higher quality (15-60s). Default 'base'.")] = "base",
-    max_results: Annotated[int, Param(description="Maximum results to return. Default 5.")] = 5,
-    max_chars_per_result: Annotated[int, Param(description="Max characters per excerpt block. Min 100; values over 30000 are not guaranteed. Default 1500.")] = 1500,
+    objective: Annotated[str, Param(description="Natural-language description of what information you are seeking. Provides context that focuses the ranking.")],
+    search_queries: Annotated[list[str], Param(description="1-5 concise keyword queries (3-6 words each), diverse across angles. 2-3 is the sweet spot.")],
+    mode: Annotated[Literal["basic", "advanced"], Param(description="'basic' is fast (2-5s) for routine lookups; 'advanced' (default) uses a deeper retrieval/compression pipeline (15-60s) for higher-quality results.")] = "advanced",
+    max_results: Annotated[int, Param(description="Upper bound on returned results. Default 5.")] = 5,
+    max_chars_per_result: Annotated[int, Param(description="Max characters per excerpt block. Values below 1000 are floored to 1000 by the API. Default 1500.")] = 1500,
+    include_domains: Annotated[Optional[list[str]], Param(description="Optional allowlist of apex domains (e.g. ['arxiv.org', 'nature.com']) or wildcard TLDs ('.gov', '.edu'). Restrictive — use only when single-publisher or compliance scope is required.")] = None,
+    exclude_domains: Annotated[Optional[list[str]], Param(description="Optional blocklist of apex domains. Combined with include_domains, total must be <= 200.")] = None,
+    after_date: Annotated[Optional[str], Param(description="Recency filter; YYYY-MM-DD. Only results published on or after this date.")] = None,
 ) -> str:
-    """Web search via the Parallel AI Search API. Returns ranked URLs with extended
+    """Web search via the Parallel Search API. Returns ranked URLs with extended
 page excerpts optimized for LLM consumption.
 
-Use processor='base' (default, 2-5s) for routine queries; processor='pro' (15-60s)
-for higher-quality retrieval prioritizing freshness and relevance. Provide a clear
-natural-language `objective` describing what you are looking for, plus 1-N keyword
-`search_queries` to dispatch in parallel.
+Use mode='basic' for routine queries (2-5s) and mode='advanced' (default) for
+higher-quality retrieval prioritizing freshness and relevance (15-60s). Provide
+a clear natural-language `objective` plus 1-5 diverse keyword `search_queries`.
+Follow up with `web_extract` on any URL whose excerpt is interesting but
+truncated.
 
     Args:
-        objective: Natural-language description of what information you are seeking.
-        search_queries: Keyword queries to dispatch in parallel.
-        processor: 'base' for fast/cheap, 'pro' for higher quality.
-        max_results: Maximum results to return.
+        objective: Natural-language description of what you are seeking.
+        search_queries: 1-5 diverse keyword queries.
+        mode: 'basic' (fast) or 'advanced' (deeper retrieval).
+        max_results: Upper bound on returned results.
         max_chars_per_result: Max characters per excerpt block.
+        include_domains: Optional allowlist of apex domains or wildcard TLDs.
+        exclude_domains: Optional blocklist of apex domains.
+        after_date: Recency filter (YYYY-MM-DD).
     """
     api_key = os.environ.get("PARALLEL_API_KEY")
     if not api_key:
         return error_response("PARALLEL_API_KEY environment variable not set.")
 
+    advanced: dict = {
+        "excerpt_settings": {"max_chars_per_result": max_chars_per_result},
+        "max_results": max_results,
+    }
+
+    source_policy: dict = {}
+
+    if include_domains:
+        source_policy["include_domains"] = include_domains
+
+    if exclude_domains:
+        source_policy["exclude_domains"] = exclude_domains
+
+    if after_date:
+        source_policy["after_date"] = after_date
+
+    if source_policy:
+        advanced["source_policy"] = source_policy
+
     payload = {
         "objective": objective,
         "search_queries": search_queries,
-        "processor": processor,
-        "max_results": max_results,
-        "max_chars_per_result": max_chars_per_result,
+        "mode": mode,
+        "client_model": CLIENT_MODEL,
+        "session_id": uuid.uuid4().hex,
+        "advanced_settings": advanced,
     }
     headers = {
         "x-api-key": api_key,

@@ -138,8 +138,8 @@ def deploy_general_worker(
     resolved_tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, tools)
 
     # Reason: If nothing resolved but every requested tool is a WorkerAgent built-in
-    # (web_search, write_note, register_tools), proceed silently — the worker
-    # already has those tools registered at construction time.
+    # (web_search, web_extract, write_note, register_tools), proceed silently — the
+    # worker already has those tools registered at construction time.
     if not resolved_tools:
         only_builtins = all(name in WORKER_BUILTIN_TOOLS for name in tools)
 

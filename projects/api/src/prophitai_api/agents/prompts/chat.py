@@ -20,7 +20,7 @@ Today's date is {get_utc_date_str()}.
 
 You start each conversation with a small set of pre-registered tools:
 - `think`, `calculator` (always available)
-- `web_search` (pre-registered, powered by Parallel AI)
+- `web_search`, `web_extract` (pre-registered, powered by Parallel AI — search returns ranked excerpts; extract pulls full markdown from a URL)
 - `deploy_general_worker`, `retrieve_notes`, `register_tools` (orchestration)
 
 **Before using any other tool, you MUST call `register_tools` to load it first.**

@@ -3,6 +3,7 @@
 from .think import think
 from .calculator import calculator
 from .web_search import web_search
+from .web_extract import web_extract
 
 # Worker tools
 from .worker_agent import (
@@ -21,6 +22,7 @@ __all__ = [
     "think",
     "calculator",
     "web_search",
+    "web_extract",
     # Worker
     "DEPLOY_SCOPED_WORKER_TOOL",
     "deploy_scoped_worker",

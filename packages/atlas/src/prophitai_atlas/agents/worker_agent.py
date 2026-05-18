@@ -7,7 +7,7 @@ from prophitai_atlas.agents.base import AgentBase
 from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_PROVIDER, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.prompts.worker import build_worker_system_prompt
-from prophitai_atlas.tools.base import web_search
+from prophitai_atlas.tools.base import web_search, web_extract
 from prophitai_atlas.tools.base.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
 
 from prophitai_shared.time_utils import get_current_utc_time
@@ -63,6 +63,7 @@ class WorkerAgent(AgentBase):
         )
 
         self.add_tool(**web_search.tool)
+        self.add_tool(**web_extract.tool)
 
         # --- Register scoped tools directly --- #
         if tools:
