@@ -1,10 +1,17 @@
-"""Tool Handler - executes tools and manages message history."""
+"""Tool Handler - executes tools and manages message history.
+
+Tool calls arrive as OpenAI-wire-shaped dicts:
+    {"id": str, "type": "function", "function": {"name": str, "arguments": str}}
+
+The handler dispatches each call, runs the matching Python callable, emits
+streaming events to the chat callback, and appends the tool-result message.
+"""
 
 import inspect
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Dict, Any, Optional, TYPE_CHECKING, Union
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
 
 import yaml
 
@@ -13,7 +20,6 @@ from prophitai_atlas.execution.utils import stringify_for_llm
 from prophitai_atlas.logging import AgentPrinter
 from prophitai_atlas.tools.responses import error_response
 from prophitai_atlas.utils.truncation import truncate_for_display
-from prophitai_shared import NormalizedToolCall
 
 if TYPE_CHECKING:
     from prophitai_atlas.agents import AgentBase
@@ -24,22 +30,42 @@ if TYPE_CHECKING:
 # Tools that modify agent state and must run sequentially
 _SEQUENTIAL_ONLY_TOOLS = {"think", "register_tools", "update_plan"}
 
-def _should_run_parallel(tool_calls: List[NormalizedToolCall]) -> bool:
+
+# ================================
+# --> Helper funcs
+# ================================
+
+
+def _tool_call_name(tc: Dict[str, Any]) -> str:
+    return tc.get("function", {}).get("name", "")
+
+
+def _tool_call_arguments(tc: Dict[str, Any]) -> str:
+    return tc.get("function", {}).get("arguments", "") or "{}"
+
+
+def _should_run_parallel(tool_calls: List[Dict[str, Any]]) -> bool:
     """Determine if tool calls can be executed in parallel."""
     if len(tool_calls) <= 1:
         return False
+
     for tool_call in tool_calls:
-        if tool_call.name in _SEQUENTIAL_ONLY_TOOLS:
+        if _tool_call_name(tool_call) in _SEQUENTIAL_ONLY_TOOLS:
             return False
+
     return True
 
-def _sanitize_tool_call_args(tool_calls: List[NormalizedToolCall]) -> None:
-    """Replace unparseable arguments_json with '{}' so downstream parsing is safe."""
+
+def _sanitize_tool_call_args(tool_calls: List[Dict[str, Any]]) -> None:
+    """Replace unparseable arguments JSON with '{}' so downstream parsing is safe."""
     for tc in tool_calls:
+        fn = tc.setdefault("function", {})
+        args = fn.get("arguments") or "{}"
+
         try:
-            json.loads(tc.arguments_json or "{}")
+            json.loads(args)
         except (json.JSONDecodeError, TypeError):
-            tc.arguments_json = "{}"
+            fn["arguments"] = "{}"
 
 
 def _tool_reported_failure(result: Any) -> bool:
@@ -52,14 +78,19 @@ def _tool_reported_failure(result: Any) -> bool:
     return isinstance(parsed, dict) and parsed.get("success") is False
 
 
+# ================================
+# --> Handler
+# ================================
+
+
 class ToolHandler:
     """Handles tool execution and result formatting."""
 
     def __init__(
         self,
-        agent: 'AgentBase',
+        agent: "AgentBase",
         printer: AgentPrinter,
-        observer: 'LangfuseObserver',
+        observer: "LangfuseObserver",
         chat_callback: Optional[Union["ChatCallback", "NoOpChatCallback"]] = None,
     ):
         self.agent = agent
@@ -70,11 +101,11 @@ class ToolHandler:
 
     @property
     def chat_callback(self) -> Optional[Union["ChatCallback", "NoOpChatCallback"]]:
-        return getattr(self.agent, 'chat_callback', None)
+        return getattr(self.agent, "chat_callback", None)
 
     def dispatch(
         self,
-        tool_calls: List[NormalizedToolCall],
+        tool_calls: List[Dict[str, Any]],
         assistant_text: str,
         *,
         iteration: int,
@@ -87,7 +118,6 @@ class ToolHandler:
         """
         _sanitize_tool_call_args(tool_calls)
 
-        # Add the assistant text and tool calls to the message history before tool results are appended
         self.agent.messages.append({
             "role": "assistant",
             "content": assistant_text,
@@ -99,19 +129,19 @@ class ToolHandler:
         else:
             self._run_sequential(tool_calls, iteration=iteration)
 
-        return [tc.name for tc in tool_calls]
+        return [_tool_call_name(tc) for tc in tool_calls]
 
     def _run_sequential(
         self,
-        tool_calls: List[NormalizedToolCall],
+        tool_calls: List[Dict[str, Any]],
         *,
         iteration: int,
     ) -> None:
 
         for tool_call in tool_calls:
-            name = tool_call.name
-            tool_call_id = tool_call.id
-            args_json = tool_call.arguments_json or "{}"
+            name = _tool_call_name(tool_call)
+            tool_call_id = tool_call.get("id", "")
+            args_json = _tool_call_arguments(tool_call)
             args, parse_error = self._parse_arguments(args_json)
 
             self.printer.tool_call_start(name)
@@ -126,7 +156,7 @@ class ToolHandler:
 
             if parse_error:
                 self.printer.parse_error(args_json)
-                
+
                 result = error_response(
                     f"Tool '{name}' was not executed because arguments could not be parsed. "
                     f"{parse_error}. Please retry the tool call with valid JSON arguments."
@@ -148,7 +178,7 @@ class ToolHandler:
             self.printer.tool_arguments(args)
 
             start_time = time.perf_counter()
-            result = self._execute_tool(name, args) # run the tool function with the arguments 
+            result = self._execute_tool(name, args)
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             success = self._add_tool_result(tool_call, result, name, args, parallel=False)
@@ -164,7 +194,7 @@ class ToolHandler:
 
     def _run_parallel(
         self,
-        tool_calls: List[NormalizedToolCall],
+        tool_calls: List[Dict[str, Any]],
         *,
         iteration: int,
     ) -> None:
@@ -173,11 +203,9 @@ class ToolHandler:
 
         parsed_calls = []
         for tool_call in tool_calls:
-            name = tool_call.name
-
-            tool_call_id = tool_call.id
-
-            args_json = tool_call.arguments_json or "{}"
+            name = _tool_call_name(tool_call)
+            tool_call_id = tool_call.get("id", "")
+            args_json = _tool_call_arguments(tool_call)
             args, parse_error = self._parse_arguments(args_json)
             parsed_calls.append((tool_call, name, args, parse_error))
 
@@ -191,7 +219,7 @@ class ToolHandler:
                     iteration=iteration,
                 )
 
-        start_times = {tc.id: time.perf_counter() for tc in tool_calls}
+        start_times = {tc.get("id", ""): time.perf_counter() for tc in tool_calls}
         results = self._execute_tools_parallel(parsed_calls)
         end_time = time.perf_counter()
 
@@ -199,10 +227,11 @@ class ToolHandler:
             success = self._add_tool_result(tool_call, result, name, args, parallel=True)
 
             if self.chat_callback:
-                duration_ms = int((end_time - start_times[tool_call.id]) * 1000)
-                
+                tool_call_id = tool_call.get("id", "")
+                duration_ms = int((end_time - start_times[tool_call_id]) * 1000)
+
                 self.chat_callback.on_tool_call_result(
-                    tool_call_id=tool_call.id,
+                    tool_call_id=tool_call_id,
                     tool_name=name,
                     result=truncate_for_display(result),
                     success=success,
@@ -302,7 +331,7 @@ class ToolHandler:
 
     def _add_tool_result(
         self,
-        tool_call: NormalizedToolCall,
+        tool_call: Dict[str, Any],
         result: Any,
         name: str,
         args: Dict[str, Any],
@@ -325,7 +354,7 @@ class ToolHandler:
 
         self.agent.messages.append({
             "role": "tool",
-            "tool_call_id": tool_call.id,
+            "tool_call_id": tool_call.get("id", ""),
             "content": content,
         })
 

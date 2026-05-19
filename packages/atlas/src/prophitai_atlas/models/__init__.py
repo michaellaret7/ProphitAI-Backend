@@ -6,14 +6,11 @@ from .callbacks import ChatCallback, NoOpChatCallback, WorkerCallbackWrapper
 from .agent_response import AgentResponse
 from .worker_spec import WorkerSpec
 from .defaults import (
-    DEFAULT_PROVIDER,
     DEFAULT_MODEL,
     STRONG_MODEL,
-    WORKER_PROVIDER,
     WORKER_MODEL,
-    PLANNER_PROVIDER,
     PLANNER_MODEL,
-    PARSER_FALLBACK_CHAIN,
+    PARSER_MODEL,
 )
 
 __all__ = [
@@ -24,12 +21,9 @@ __all__ = [
     "NoOpChatCallback",
     "WorkerCallbackWrapper",
     "WorkerSpec",
-    "DEFAULT_PROVIDER",
     "DEFAULT_MODEL",
     "STRONG_MODEL",
-    "WORKER_PROVIDER",
     "WORKER_MODEL",
-    "PLANNER_PROVIDER",
     "PLANNER_MODEL",
-    "PARSER_FALLBACK_CHAIN",
+    "PARSER_MODEL",
 ]

@@ -197,7 +197,6 @@ class PortfolioBuilderAgent:
         *,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "portfolio_builder",
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
@@ -210,7 +209,6 @@ class PortfolioBuilderAgent:
             system_prompt=orchestrator_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider=provider,
             model=model,
             print_mode=print_mode,
         )

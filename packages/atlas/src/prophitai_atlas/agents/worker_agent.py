@@ -4,12 +4,13 @@ from functools import partial
 from typing import Any, Callable, List, Optional
 
 from prophitai_atlas.agents.base import AgentBase
-from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_PROVIDER, WORKER_MODEL
+from prophitai_atlas.models import PrintMode, AgentResponse, WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.prompts.worker import build_worker_system_prompt
 from prophitai_atlas.tools.base import web_search, web_extract
 from prophitai_atlas.tools.base.worker_agent.write_note import write_note, WRITE_NOTE_TOOL
 
+from prophitai_shared import system_msg
 from prophitai_shared.time_utils import get_current_utc_time
 
 
@@ -31,7 +32,6 @@ class WorkerAgent(AgentBase):
         *,
         tools: Optional[List[Callable]] = None,
         system_prompt: Optional[str] = None,
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 100,
         print_mode: PrintMode = PrintMode.PRODUCTION,
@@ -40,7 +40,6 @@ class WorkerAgent(AgentBase):
         user_id: Optional[str] = None,
     ):
         super().__init__(
-            provider=provider or WORKER_PROVIDER,
             model=model or WORKER_MODEL,
             max_iterations=max_iterations,
             print_mode=print_mode,
@@ -76,26 +75,26 @@ class WorkerAgent(AgentBase):
         with self.observer.agent_run(
             name="worker_agent.run",
             input=self.task,
-            provider=self.provider,
+            provider="openrouter",
             model=self.model,
         ) as run_span:
 
             worker_prompt = self._build_system_prompt()
 
             self.messages = [
-                {"role": "system", "content": self._wrap_system_for_provider(worker_prompt)},
+                system_msg(worker_prompt, cache=True),
                 {"role": "user", "content": self.task},
             ]
 
             trace_name = self.get_trace_name()
-            
+
             with self.observer.trace_context(
                 trace_name=trace_name,
                 session_id=self.session_id,
-                tags=[trace_name, self.provider],
-                metadata={"model": self.model}
+                tags=[trace_name, "openrouter"],
+                metadata={"model": self.model},
             ):
-                result = self.execution_loop.execute() # main agent execution loop 
+                result = self.execution_loop.execute()
 
             run_span.update(output=result["answer"])
 
@@ -103,10 +102,10 @@ class WorkerAgent(AgentBase):
                 answer=result["answer"],
                 tool_calls_made=result["tool_calls"],
                 tokens_used=result["total_tokens"],
-                cache_creation_input_tokens=result["cache_creation_input_tokens"],
-                cache_read_input_tokens=result["cache_read_input_tokens"],
+                cache_write_tokens=result["cache_write_tokens"],
+                cached_tokens=result["cached_tokens"],
                 iterations=result["iterations"],
-                stop_reason=result["stop_reason"]
+                stop_reason=result["stop_reason"],
             )
 
     # ================================
@@ -114,7 +113,7 @@ class WorkerAgent(AgentBase):
     # ================================
 
     def _build_system_prompt(self) -> str:
-        """Build the system prompt as plain text. Provider wrapping happens at the boundary."""
+        """Build the system prompt as plain text. Caching is attached via system_msg."""
         if self.custom_system_prompt:
             date = get_current_utc_time().strftime("%m/%d/%Y")
             return f"{self.custom_system_prompt}\n\nToday's date is {date}."

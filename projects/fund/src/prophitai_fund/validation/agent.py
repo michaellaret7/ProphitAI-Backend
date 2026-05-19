@@ -58,7 +58,6 @@ class ValidatorAgent:
         sandbox_id: str,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "validator",
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.VERBOSE,
     ):
@@ -71,7 +70,6 @@ class ValidatorAgent:
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider=provider,
             model=model,
             print_mode=print_mode,
         )

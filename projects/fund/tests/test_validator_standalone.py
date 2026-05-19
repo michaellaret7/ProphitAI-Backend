@@ -17,8 +17,7 @@ from prophitai_tools.sandbox.lifecycle import close_sandbox, setup_repo
 
 
 STRATEGY_ID = "working_capital_velocity_and_cash_conversion_cycle_improvement"
-MODEL = "claude-sonnet-4-6"
-PROVIDER = "anthropic"
+MODEL = "anthropic/claude-sonnet-4.6"
 
 
 def main() -> None:
@@ -29,7 +28,6 @@ def main() -> None:
 
         validator = ValidatorAgent(
             model=MODEL,
-            provider=PROVIDER,
             sandbox_id=sandbox_id,
             print_mode=PrintMode.VERBOSE,
         )

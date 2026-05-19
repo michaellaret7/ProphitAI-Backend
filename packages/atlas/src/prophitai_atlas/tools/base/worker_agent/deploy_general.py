@@ -4,7 +4,7 @@ import uuid
 from typing import Any, List, Optional
 
 from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
-from prophitai_atlas.models.defaults import WORKER_PROVIDER, WORKER_MODEL
+from prophitai_atlas.models.defaults import WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.responses import success_response, error_response
 
@@ -102,13 +102,9 @@ def deploy_general_worker(
     tools: List[str],
     plan_task_id: str = "",
     context: str = "",
-    provider: str = WORKER_PROVIDER,
     model: str = WORKER_MODEL,
 ) -> str:
     """Deploy an ad-hoc worker with explicitly named tools.
-
-    Resolves tool name strings to callables and runs the worker
-    with the default worker system prompt.
 
     Args:
         notebook: Shared Notebook instance (pre-bound via lambda).
@@ -118,8 +114,7 @@ def deploy_general_worker(
         tools: List of tool name strings to resolve and give to the worker.
         plan_task_id: The plan task ID this worker is deployed for.
         context: Optional data from prior steps to prepend to the task.
-        provider: LLM provider for the worker. Bound at registration time via lambda.
-        model: LLM model for the worker. Bound at registration time via lambda.
+        model: OpenRouter model slug for the worker. Bound at registration time via lambda.
 
     Returns:
         YAML-formatted success/error response.
@@ -168,7 +163,6 @@ def deploy_general_worker(
             task=full_task,
             tools=resolved_tools,
             notebook=notebook,
-            provider=provider,
             model=model,
             chat_callback=worker_callback,
             max_iterations=GENERAL_WORKER_MAX_ITERATIONS,

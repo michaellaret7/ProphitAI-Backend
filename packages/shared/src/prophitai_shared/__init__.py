@@ -9,20 +9,16 @@ from prophitai_shared.time_utils import (
     get_utc_timestamp_str,
 )
 
-from prophitai_shared.choose_model_and_client import (
-    MODEL_ALIASES,
-    PROVIDER_CONFIGS,
-    ProviderConfig,
-    get_backend,
+from prophitai_shared.client import build_client
+from prophitai_shared.messages import (
+    assistant_msg,
+    cached_text,
+    refresh_rolling_cache_breakpoint,
+    system_msg,
+    tool_msg,
+    user_msg,
 )
-from prophitai_shared.llm_backends import (
-    AnthropicBackend,
-    LLMBackend,
-    NormalizedLLMResponse,
-    NormalizedToolCall,
-    OpenAICompatibleBackend,
-    UsageStats,
-)
+from prophitai_shared.usage import Usage
 
 __all__ = [
     "get_current_utc_time",
@@ -31,14 +27,12 @@ __all__ = [
     "get_utc_timestamp_str",
     "get_utc_date_str",
     "ensure_naive_utc",
-    "ProviderConfig",
-    "PROVIDER_CONFIGS",
-    "MODEL_ALIASES",
-    "LLMBackend",
-    "OpenAICompatibleBackend",
-    "AnthropicBackend",
-    "NormalizedLLMResponse",
-    "NormalizedToolCall",
-    "UsageStats",
-    "get_backend",
+    "build_client",
+    "system_msg",
+    "user_msg",
+    "assistant_msg",
+    "tool_msg",
+    "cached_text",
+    "refresh_rolling_cache_breakpoint",
+    "Usage",
 ]

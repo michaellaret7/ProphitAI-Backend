@@ -21,10 +21,7 @@ WORKERS: dict[str, WorkerSpec] = {
           "sandbox_grep"
         }),
         max_iterations=50,
-        # provider="fireworks",
-        # model="Qwen3.6-Plus",
-        provider="openai",
-        model="gpt-5.4",
+        model="openai/gpt-5.4",
     ),
     "code_reviewer": WorkerSpec(
         name="code_reviewer",
@@ -36,9 +33,6 @@ WORKERS: dict[str, WorkerSpec] = {
             "sandbox_bash",
         }),
         max_iterations=50,
-        # provider="fireworks",
-        # model="Qwen3.6-Plus",
-        provider="openai",
-        model="gpt-5.4",
+        model="openai/gpt-5.4",
     ),
 }

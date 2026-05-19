@@ -3,7 +3,7 @@
 from typing import Optional
 
 from prophitai_atlas.agents.base import AgentBase
-from prophitai_atlas.models import PrintMode, PLANNER_PROVIDER, PLANNER_MODEL
+from prophitai_atlas.models import PrintMode, PLANNER_MODEL
 from prophitai_atlas.utils.gpt_parser import parse_with_gpt
 from prophitai_atlas.models.new_plan import Plan
 from prophitai_atlas.prompts.planner import PLANNER_SYSTEM_PROMPT
@@ -21,14 +21,12 @@ class PlannerAgent(AgentBase):
         task: str,
         *,
         system_context: Optional[str] = None,
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 5,
         print_mode: PrintMode = PrintMode.PRODUCTION,
-        temperature: Optional[float] = None
+        temperature: Optional[float] = None,
     ):
         super().__init__(
-            provider=provider or PLANNER_PROVIDER,
             model=model or PLANNER_MODEL,
             max_iterations=max_iterations,
             print_mode=print_mode,
@@ -45,7 +43,7 @@ class PlannerAgent(AgentBase):
         with self.observer.agent_run(
             name="planner_agent.run",
             input=self.task,
-            provider=self.provider,
+            provider="openrouter",
             model=self.model,
         ) as run_span:
 
@@ -72,7 +70,7 @@ class PlannerAgent(AgentBase):
             with self.observer.trace_context(
                 trace_name=trace_name,
                 session_id=self.session_id,
-                tags=[trace_name, self.provider],
+                tags=[trace_name, "openrouter"],
                 metadata={"model": self.model},
             ):
                 response = self.execution_loop.execute()
@@ -86,6 +84,7 @@ class PlannerAgent(AgentBase):
 
             return plan
 
+
 if __name__ == "__main__":
     planner = PlannerAgent(
         task=(
@@ -98,8 +97,6 @@ if __name__ == "__main__":
             "confidence level and thesis invalidation triggers."
         ),
         print_mode=PrintMode.PRODUCTION,
-        provider="anthropic",
-        model="claude-opus-4-6",
     )
     plan = planner.run()
     print(plan)

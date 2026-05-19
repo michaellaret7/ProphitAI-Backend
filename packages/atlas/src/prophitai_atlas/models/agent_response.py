@@ -13,8 +13,8 @@ class AgentResponse(BaseModel):
     answer: str
     tool_calls_made: List[str] = Field(default_factory=list)
     tokens_used: int = 0
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
+    cache_write_tokens: int = 0
+    cached_tokens: int = 0
     iterations: int = 0
     stop_reason: str = "answer_ready"
     plan: Optional[Plan] = None

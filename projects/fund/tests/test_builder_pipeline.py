@@ -502,8 +502,7 @@ def test_builder_pipeline() -> None:
     strategy_name = "aqm_52"
 
     # Reason: Using sonnet for speed — switch to opus for higher quality builds.
-    provider = "anthropic"
-    model = "claude-sonnet-4-6"
+    model = "anthropic/claude-sonnet-4.6"
 
     try:
         # ---- Step 1: Spin up sandbox and bootstrap repo ----
@@ -551,7 +550,6 @@ def test_builder_pipeline() -> None:
         indicator_agent = IndicatorBuilderAgent(
             sandbox_id=sandbox_id,
             chat_callback=callback,
-            provider=provider,
             model=model,
         )
 
@@ -572,7 +570,6 @@ def test_builder_pipeline() -> None:
         signal_agent = SignalStrategyBuilderAgent(
             sandbox_id=sandbox_id,
             chat_callback=callback,
-            provider=provider,
             model=model,
         )
 
@@ -593,7 +590,6 @@ def test_builder_pipeline() -> None:
         execution_agent = ExecutionLayerBuilderAgent(
             sandbox_id=sandbox_id,
             chat_callback=callback,
-            provider=provider,
             model=model,
         )
 

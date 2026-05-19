@@ -3,19 +3,173 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, Dict, Any, List, Optional
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from openai import OpenAI
 
 from prophitai_atlas.models.new_plan import TaskStatus
-from prophitai_shared import NormalizedLLMResponse
+from prophitai_shared import Usage, refresh_rolling_cache_breakpoint
 
 if TYPE_CHECKING:
     from prophitai_atlas.agents.base import AgentBase
     from prophitai_atlas.observability import LangfuseObserver
 
+
+# ================================
+# --> Streamed response shape
+# ================================
+
+
+@dataclass
+class StreamedResponse:
+    """One LLM turn's output, assembled from a streamed chat completion.
+
+    `tool_calls` is the OpenAI wire shape — list of dicts with id/type/function.
+    """
+
+    content: str
+    tool_calls: List[Dict[str, Any]]
+    usage: Usage
+
+
+# ================================
+# --> Helper funcs
+# ================================
+
+
+def _format_tools(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Wrap canonical tool definitions in the OpenAI function-calling envelope."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["parameters"],
+            },
+        }
+        for t in tools
+    ]
+
+
+def _extract_reasoning(obj: Any) -> str:
+    """Pull reasoning text from any of the provider shapes OpenRouter forwards."""
+    text = getattr(obj, "reasoning_content", None) or getattr(obj, "reason", None)
+
+    if text:
+        return text
+
+    details = getattr(obj, "reasoning_details", None) or []
+    parts: List[str] = []
+
+    for d in details:
+        t = d.get("text") if isinstance(d, dict) else getattr(d, "text", None)
+
+        if t:
+            parts.append(t)
+
+    return "".join(parts)
+
+
+# ================================
+# --> Streaming call
+# ================================
+
+
+def call_llm_streaming(
+    *,
+    client: OpenAI,
+    model: str,
+    messages: List[Dict[str, Any]],
+    tools: Optional[List[Dict[str, Any]]],
+    temperature: Optional[float],
+    callback: Any,
+    message_id: Optional[str],
+) -> StreamedResponse:
+    """Stream a chat completion and assemble (content, tool_calls, usage).
+
+    The rolling cache breakpoint is refreshed before each call so the latest
+    assistant/tool message carries the marker. Tool calls arrive fragmented
+    across chunks — they are reassembled into index-keyed slots.
+    """
+    refresh_rolling_cache_breakpoint(messages)
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        tools=_format_tools(tools) if tools else None,
+        tool_choice="auto" if tools else None,
+        temperature=temperature,
+        stream=True,
+        # Final chunk arrives with empty choices and populated usage.
+        stream_options={"include_usage": True},
+    )
+
+    content_pieces: List[str] = []
+    tool_call_slots: Dict[int, Dict[str, Any]] = {}
+    usage: Optional[Usage] = None
+
+    for chunk in response:
+        if getattr(chunk, "usage", None):
+            usage = Usage.from_response(chunk.usage)
+
+        if not chunk.choices:
+            continue
+
+        delta = chunk.choices[0].delta
+
+        reasoning = _extract_reasoning(delta)
+
+        if reasoning and callback is not None:
+            # Reason: surface reasoning live but do not append to history.
+            on_reasoning = getattr(callback, "on_reasoning_delta", None)
+
+            if on_reasoning is not None:
+                on_reasoning(message_id or "", reasoning)
+
+        if delta.content:
+            content_pieces.append(delta.content)
+
+            if callback is not None:
+                callback.on_text_delta(message_id or "", delta.content)
+
+        if delta.tool_calls:
+            for tc in delta.tool_calls:
+                slot = tool_call_slots.setdefault(
+                    tc.index,
+                    {
+                        "id": "",
+                        "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    },
+                )
+
+                if tc.id:
+                    slot["id"] = tc.id
+
+                if tc.function:
+                    if tc.function.name:
+                        slot["function"]["name"] = tc.function.name
+
+                    if tc.function.arguments:
+                        slot["function"]["arguments"] += tc.function.arguments
+
+    content = "".join(content_pieces)
+    tool_calls = [tool_call_slots[i] for i in sorted(tool_call_slots)]
+
+    return StreamedResponse(content=content, tool_calls=tool_calls, usage=usage or Usage.zero())
+
+
+# ================================
+# --> Loop
+# ================================
+
+
 class ExecutionLoop:
     """Fast execution loop for chat - no planning, terminates on text-only response."""
 
-    def __init__(self, agent: 'AgentBase', *, observer: 'LangfuseObserver'):
+    def __init__(self, agent: "AgentBase", *, observer: "LangfuseObserver"):
         self.agent = agent
         self.printer = agent.printer
         self.observer = observer
@@ -46,7 +200,6 @@ class ExecutionLoop:
             assistant_text = ""
             iteration_tokens = 0
 
-            # Emit run started
             callback.on_run_started(
                 session_id=self.agent.session_id,
                 message_id=message_id,
@@ -65,12 +218,12 @@ class ExecutionLoop:
                         callback.on_iteration_start(iteration=i)
                         self.printer.iteration_start(i, self.agent.max_iterations)
 
-                        response = self.call_llm(callback=callback, message_id=message_id) # <-- this is where the LLM call is made and the response dict is returned
+                        response = self.call_llm(callback=callback, message_id=message_id)
 
                         iteration_tokens = self._track_token_usage(response)
                         iteration_usage = self._build_iteration_usage(response)
 
-                        assistant_text = response.assistant_text
+                        assistant_text = response.content
 
                         if response.tool_calls:
                             called_tools = self.agent.tool_handler.dispatch(
@@ -102,7 +255,7 @@ class ExecutionLoop:
                                     "role": "assistant",
                                     "content": "I need to continue working on the remaining tasks."
                                 })
-                                
+
                                 self.agent.messages.append({
                                     "role": "user",
                                     "content": (
@@ -118,7 +271,7 @@ class ExecutionLoop:
 
                             self.agent.messages.append({
                                 "role": "assistant",
-                                "content": assistant_text
+                                "content": assistant_text,
                             })
 
                             iteration_span.update(output={
@@ -170,10 +323,11 @@ class ExecutionLoop:
         *,
         callback: Any = None,
         message_id: Optional[str] = None,
-    ) -> NormalizedLLMResponse:
-        """Make LLM API call. Streams text deltas through the given callback."""
-
-        return self.agent.backend.call_llm(
+    ) -> StreamedResponse:
+        """Stream one chat completion and return (content, tool_calls, usage)."""
+        return call_llm_streaming(
+            client=self.agent.client,
+            model=self.agent.model,
             messages=self.agent.messages,
             tools=self.agent.tools if self.agent.tools else None,
             temperature=self.agent.temperature,
@@ -181,23 +335,23 @@ class ExecutionLoop:
             message_id=message_id,
         )
 
-    def _track_token_usage(self, response: NormalizedLLMResponse) -> int:
+    def _track_token_usage(self, response: StreamedResponse) -> int:
         iteration_tokens = int(response.usage.total_tokens)
 
         self.agent.total_tokens += iteration_tokens
-        self.agent.cache_creation_input_tokens += int(response.usage.cache_creation_input_tokens)
-        self.agent.cache_read_input_tokens += int(response.usage.cache_read_input_tokens)
+        self.agent.cache_write_tokens += int(response.usage.cache_write_tokens)
+        self.agent.cached_tokens += int(response.usage.cached_tokens)
 
         return iteration_tokens
 
     @staticmethod
-    def _build_iteration_usage(response: NormalizedLLMResponse) -> Dict[str, int]:
+    def _build_iteration_usage(response: StreamedResponse) -> Dict[str, int]:
         return {
-            "input_tokens": int(response.usage.input_tokens),
-            "output_tokens": int(response.usage.output_tokens),
+            "prompt_tokens": int(response.usage.prompt_tokens),
+            "completion_tokens": int(response.usage.completion_tokens),
             "total_tokens": int(response.usage.total_tokens),
-            "cache_creation_input_tokens": int(response.usage.cache_creation_input_tokens),
-            "cache_read_input_tokens": int(response.usage.cache_read_input_tokens),
+            "cache_write_tokens": int(response.usage.cache_write_tokens),
+            "cached_tokens": int(response.usage.cached_tokens),
         }
 
     def _build_iteration_input(self, iteration: int) -> Dict[str, Any]:
@@ -209,6 +363,11 @@ class ExecutionLoop:
         last_msg = messages[-1]
         last_role = last_msg.get("role", "unknown")
         last_content = last_msg.get("content", "") or ""
+
+        if isinstance(last_content, list):
+            last_content = "".join(
+                part.get("text", "") for part in last_content if isinstance(part, dict)
+            )
 
         return {
             "iteration": iteration,
@@ -222,7 +381,6 @@ class ExecutionLoop:
     # ================================
 
     def _has_incomplete_tasks(self) -> bool:
-        """Check if the agent has a plan with incomplete tasks."""
         plan = getattr(self.agent, "plan", None)
 
         if not plan or not plan.tasks:
@@ -231,7 +389,6 @@ class ExecutionLoop:
         return any(t.status != TaskStatus.COMPLETE for t in plan.tasks)
 
     def _get_incomplete_tasks(self) -> list:
-        """Return incomplete tasks from the agent's plan, ordered by step then id."""
         plan = getattr(self.agent, "plan", None)
 
         if not plan or not plan.tasks:
@@ -261,17 +418,16 @@ class ExecutionLoop:
             "stop_reason": stop_reason,
             "iterations": iterations,
             "total_tokens": self.agent.total_tokens,
-            "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
-            "cache_read_input_tokens": self.agent.cache_read_input_tokens,
+            "cache_write_tokens": self.agent.cache_write_tokens,
+            "cached_tokens": self.agent.cached_tokens,
         })
 
         return {
             "answer": answer,
             "tool_calls": tool_calls_made,
             "total_tokens": self.agent.total_tokens,
-            "cache_creation_input_tokens": self.agent.cache_creation_input_tokens,
-            "cache_read_input_tokens": self.agent.cache_read_input_tokens,
+            "cache_write_tokens": self.agent.cache_write_tokens,
+            "cached_tokens": self.agent.cached_tokens,
             "iterations": iterations,
             "stop_reason": stop_reason,
         }
-

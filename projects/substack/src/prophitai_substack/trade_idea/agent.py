@@ -42,7 +42,6 @@ class TradeIdeaAgent(Agent):
         *,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "trade_idea",
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
@@ -51,8 +50,7 @@ class TradeIdeaAgent(Agent):
         Args:
             chat_callback: Optional callback for streaming progress.
             session_id: Identifier for the agent session.
-            provider: LLM provider override.
-            model: LLM model override.
+            model: OpenRouter model slug override.
             print_mode: Console output verbosity.
         """
 
@@ -65,7 +63,6 @@ class TradeIdeaAgent(Agent):
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider=provider,
             model=model,
             print_mode=print_mode,
         )

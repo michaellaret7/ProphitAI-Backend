@@ -177,7 +177,9 @@ Available `DataRequirement` kinds (registered in `build_default_resolver()`):
 Foundational utilities used by all packages:
 
 - `time_utils.py`: UTC time management (CRITICAL - see Timezone section)
-- `choose_model_and_client.py`: LLM provider abstraction (`get_model_and_client()`)
+- `client.py`: OpenRouter-only OpenAI-compatible client builder (`build_client(model)`)
+- `messages.py`: chat-completion message constructors + rolling cache breakpoint helper
+- `usage.py`: `Usage` dataclass for per-call LLM telemetry
 
 ### API Project (`projects/api/src/prophitai_api/`)
 FastAPI REST/WebSocket API - main backend service:
@@ -447,7 +449,9 @@ def process_items(items: list[str], lookup: dict):
 - `packages/data/src/prophitai_data/db/config.py`: Database engine configuration
 - `packages/data/src/prophitai_data/session/decorators.py`: Session management decorators
 - `packages/shared/src/prophitai_shared/time_utils.py`: UTC time utilities
-- `packages/shared/src/prophitai_shared/choose_model_and_client.py`: LLM provider selection
+- `packages/shared/src/prophitai_shared/client.py`: OpenRouter client builder (single LLM entry point)
+- `packages/shared/src/prophitai_shared/messages.py`: message dict constructors + rolling cache breakpoint helper
+- `packages/shared/src/prophitai_shared/usage.py`: per-call LLM usage telemetry
 - `projects/api/src/prophitai_api/services/shared/chat_executor.py`: Chat session management
 - `.env`: Environment variables (API keys, DB credentials) - **NEVER COMMIT**
 - `pyproject.toml`: UV workspace configuration

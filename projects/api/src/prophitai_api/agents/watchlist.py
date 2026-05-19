@@ -177,7 +177,6 @@ class WatchlistAgent:
         *,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "watchlist",
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.PRODUCTION,
     ):
@@ -190,7 +189,6 @@ class WatchlistAgent:
             system_prompt=orchestrator_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider=provider,
             model=model,
             print_mode=print_mode,
         )

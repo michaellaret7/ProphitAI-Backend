@@ -4,25 +4,27 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Callable, Optional, Union
 
 from prophitai_atlas.models import PrintMode, ChatCallback, NoOpChatCallback
-from prophitai_shared import get_backend
+from prophitai_atlas.models.defaults import DEFAULT_MODEL
+from prophitai_shared import build_client
 from prophitai_atlas.execution import ExecutionLoop, ToolHandler
 from prophitai_atlas.logging import AgentPrinter
 from prophitai_atlas.observability import LangfuseObserver
 
 from prophitai_atlas.tools.base import think, calculator
 
+
 class AgentBase(ABC):
     """Abstract base class providing shared foundation for all Atlas agents.
 
     Provides the full execution contract required by ExecutionLoop and ToolHandler:
-    LLM client, tool registry, execution state, session callbacks, and execution components.
-    Subclasses override max_iterations to fit their use case (e.g. Agent=200, PlannerAgent=5).
+    OpenRouter client, tool registry, execution state, session callbacks,
+    and execution components. Subclasses override max_iterations to fit
+    their use case (e.g. Agent=200, PlannerAgent=5).
     """
 
     def __init__(
         self,
         *,
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 100,
         print_mode: PrintMode = PrintMode.PRODUCTION,
@@ -33,11 +35,8 @@ class AgentBase(ABC):
         # Observability
         self.observer = LangfuseObserver()
 
-        # LLM client setup
-        self.provider = provider
-        self.backend = get_backend(provider=provider, model=model)
-        self.model = self.backend.model
-        self.client = self.backend.raw_client
+        # LLM client setup (OpenRouter only)
+        self.client, self.model = build_client(model or DEFAULT_MODEL)
 
         # Configuration
         self.max_iterations = max_iterations
@@ -58,8 +57,8 @@ class AgentBase(ABC):
         # Execution state
         self.messages: List[Dict[str, Any]] = []
         self.total_tokens: int = 0
-        self.cache_creation_input_tokens: int = 0
-        self.cache_read_input_tokens: int = 0
+        self.cache_write_tokens: int = 0
+        self.cached_tokens: int = 0
 
         # Execution components
         self.printer = AgentPrinter(self.print_mode)
@@ -70,13 +69,11 @@ class AgentBase(ABC):
             observer=self.observer,
             chat_callback=self.chat_callback,
         )
-        
+
         self.execution_loop = ExecutionLoop(self, observer=self.observer)
 
         # ---- Register default tools ---- #
-        if self.provider not in ('openai', 'anthropic'):
-            self.add_tool(**think.tool)
-
+        self.add_tool(**think.tool)
         self.add_tool(**calculator.tool)
 
     def add_tool(
@@ -88,7 +85,6 @@ class AgentBase(ABC):
     ) -> None:
         """Register a tool for the agent to use. Skips if already registered."""
 
-        # ------ Skip if tool already registered. This gates dupe tool registration for worker agents. ------ #
         if name in self.tool_functions:
             return
 
@@ -121,18 +117,6 @@ class AgentBase(ABC):
         """Return the Langfuse trace name for this concrete agent class."""
         agent_name = self.__class__.__name__
         return f"{agent_name} (planned)" if planned else agent_name
-
-    def _wrap_system_for_provider(self, prompt: str) -> Union[str, List[Dict[str, Any]]]:
-        """Wrap a system prompt for the active provider's API expectations.
-
-        Anthropic gets a single cache-controlled text block so prompt caching kicks in.
-        Other providers (OpenAI, Grok, etc.) take a plain string — they cache by
-        automatic prefix matching with no opt-in.
-        """
-        if self.provider == "anthropic":
-            return [{"type": "text", "text": prompt, "cacheable": True}]
-
-        return prompt
 
     @abstractmethod
     def run(self, *args, **kwargs) -> Any:

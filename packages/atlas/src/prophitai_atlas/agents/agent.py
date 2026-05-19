@@ -12,7 +12,6 @@ from prophitai_atlas.models import (
     AgentResponse,
     ChatCallback,
     NoOpChatCallback,
-    DEFAULT_PROVIDER,
     DEFAULT_MODEL,
 )
 from prophitai_atlas.models.notebook import Notebook
@@ -24,6 +23,7 @@ from prophitai_atlas.tools.base.register_tools import (
     REGISTER_TOOLS_TOOL,
     register_tools_fn,
 )
+from prophitai_shared import system_msg
 
 from .base import AgentBase
 from prophitai_atlas.tools.base import (
@@ -58,7 +58,6 @@ class Agent(AgentBase):
 
     def __init__(
         self,
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         max_iterations: int = 200,
         print_mode: PrintMode = PrintMode.PRODUCTION,
@@ -71,7 +70,6 @@ class Agent(AgentBase):
         system_prompt: Optional[str] = None,
     ):
         super().__init__(
-            provider=provider or DEFAULT_PROVIDER,
             model=model or DEFAULT_MODEL,
             max_iterations=max_iterations,
             print_mode=print_mode,
@@ -101,9 +99,6 @@ class Agent(AgentBase):
                 self.add_tool(**func.tool)
 
         # --- System prompt --- #
-        # Reason: caller-supplied prompts win; otherwise fall back to the generic base.
-        # Stored as plain text — provider-specific block wrapping (Anthropic cache_control)
-        # happens at the message-build boundary in `_wrap_system_for_provider`.
         if system_prompt is None:
             system_prompt = build_base_system_prompt()
 
@@ -128,8 +123,7 @@ class Agent(AgentBase):
                 function=partial(register_tools_fn, tool_registry, all_tools, self),
             )
 
-
-        print(f"Initialized Agent with model: {self.model} (provider: {self.provider})")
+        print(f"Initialized Agent with model: {self.model}")
 
     def build_messages(
         self,
@@ -144,7 +138,9 @@ class Agent(AgentBase):
         """
         prompt = system_prompt if system_prompt is not None else self.system_prompt
 
-        messages = [{"role": "system", "content": self._wrap_system_for_provider(prompt)}]
+        # Reason: system prompt is cached via OpenRouter cache_control. The rolling
+        # cache breakpoint on the latest assistant/tool message lives in execution loop.
+        messages: List[Dict[str, Any]] = [system_msg(prompt, cache=True)]
 
         if conversation_history:
             messages.extend(conversation_history)
@@ -174,14 +170,14 @@ class Agent(AgentBase):
         with self.observer.agent_run(
             name=span_name,
             input=user_message,
-            provider=self.provider,
+            provider="openrouter",
             model=self.model,
         ) as run_span:
 
             try:
-                self.total_tokens = 0 # reset total tokens
-                self.cache_creation_input_tokens = 0
-                self.cache_read_input_tokens = 0
+                self.total_tokens = 0
+                self.cache_write_tokens = 0
+                self.cached_tokens = 0
 
                 # --- Planning phase ---
                 if plan_first:
@@ -196,9 +192,8 @@ class Agent(AgentBase):
 
                     self.plan = planner.run()
 
-                    # Reason: remove first to avoid stale binding if a prior run() left it registered
                     self.remove_tool(UPDATE_PLAN_TOOL["name"])
-                    
+
                     self.add_tool(
                         **UPDATE_PLAN_TOOL,
                         function=partial(update_plan, self.plan, self.chat_callback),
@@ -213,25 +208,24 @@ class Agent(AgentBase):
                 if plan_first and self.plan:
                     system_prompt = inject_plan_tasks(self.system_prompt, self.plan)
                 else:
-                    system_prompt = None  # uses self.system_prompt via build_messages
+                    system_prompt = None
 
                 # --- Build messages ---
                 self.messages = self.build_messages(
-                    user_message, 
-                    conversation_history, 
-                    system_prompt=system_prompt
+                    user_message,
+                    conversation_history,
+                    system_prompt=system_prompt,
                 )
 
                 # --- Execute ---
                 trace_name = self.get_trace_name(planned=plan_first)
-                
+
                 with self.observer.trace_context(
                     trace_name=trace_name,
                     session_id=self.session_id,
-                    tags=[trace_name, self.provider],
+                    tags=[trace_name, "openrouter"],
                     metadata={
                         "model": self.model,
-                        "provider": self.provider,
                         "max_iterations": str(self.max_iterations),
                     },
                 ):
@@ -241,8 +235,8 @@ class Agent(AgentBase):
                     "answer": result["answer"],
                     "tool_calls": result["tool_calls"],
                     "total_tokens": result["total_tokens"],
-                    "cache_creation_input_tokens": result["cache_creation_input_tokens"],
-                    "cache_read_input_tokens": result["cache_read_input_tokens"],
+                    "cache_write_tokens": result["cache_write_tokens"],
+                    "cached_tokens": result["cached_tokens"],
                     "iterations": result["iterations"],
                     "stop_reason": result["stop_reason"],
                 })
@@ -263,8 +257,8 @@ class Agent(AgentBase):
                     answer=result["answer"],
                     tool_calls_made=result["tool_calls"],
                     tokens_used=result["total_tokens"],
-                    cache_creation_input_tokens=result["cache_creation_input_tokens"],
-                    cache_read_input_tokens=result["cache_read_input_tokens"],
+                    cache_write_tokens=result["cache_write_tokens"],
+                    cached_tokens=result["cached_tokens"],
                     iterations=result["iterations"],
                     stop_reason=result["stop_reason"],
                     plan=self.plan if plan_first else None,
@@ -272,9 +266,5 @@ class Agent(AgentBase):
                 )
 
             finally:
-                # Clean up per-turn state
                 if plan_first:
                     self.remove_tool("update_plan")
-
-
-

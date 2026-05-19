@@ -8,8 +8,7 @@ from prophitai_shared.time_utils import get_current_utc_time
 def run_trade_idea_agent():
 
     agent = TradeIdeaAgent(
-        provider="anthropic",
-        model="claude-opus-4-7",
+        model="anthropic/claude-opus-4.7",
         print_mode=PrintMode.PRODUCTION,
     )
 

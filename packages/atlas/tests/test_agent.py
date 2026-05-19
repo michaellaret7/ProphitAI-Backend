@@ -1,4 +1,4 @@
-"""Smoke test — actually runs the Agent against the real LLM."""
+"""Smoke test — actually runs the Agent against the real LLM via OpenRouter."""
 
 from typing import Optional
 
@@ -79,8 +79,8 @@ FAKE_TOOLS = [get_stock_quote, get_stock_history, get_financials]
 def test_agent_chat_mode():
     """Smoke test: Agent.run() in chat mode with tool catalogue and fake data tools."""
     agent = Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
+        max_iterations=15,
         print_mode=PrintMode.PRODUCTION,
         deferred_tools=FAKE_TOOLS,
     )
@@ -90,7 +90,6 @@ def test_agent_chat_mode():
             "Use register_tools to load the market_data category, "
             "then get a quote for AAPL. Report the price."
         ),
-        max_iterations=15,
     )
 
     print(f"\n--- Chat mode results ---")
@@ -105,8 +104,8 @@ def test_agent_chat_mode():
 def test_agent_plan_first_mode():
     """Smoke test: Agent.run() with plan_first=True using fake data tools."""
     agent = Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
+        max_iterations=50,
         print_mode=PrintMode.PRODUCTION,
         deferred_tools=FAKE_TOOLS,
     )
@@ -120,7 +119,6 @@ def test_agent_plan_first_mode():
             "summarize everything."
         ),
         plan_first=True,
-        max_iterations=50,
     )
 
     print(f"\n--- Plan-first mode results ---")

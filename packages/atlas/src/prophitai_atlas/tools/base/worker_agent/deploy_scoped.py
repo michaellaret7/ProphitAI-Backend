@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from prophitai_atlas.models.callbacks import WorkerCallbackWrapper
 from prophitai_atlas.models.worker_spec import WorkerSpec
-from prophitai_atlas.models.defaults import WORKER_PROVIDER, WORKER_MODEL
+from prophitai_atlas.models.defaults import WORKER_MODEL
 from prophitai_atlas.models.notebook import Notebook
 from prophitai_atlas.tools.responses import success_response, error_response
 
@@ -136,8 +136,6 @@ def deploy_scoped_worker(
 
     tools = resolve_tools_by_name(ALL_TOOL_FUNCTIONS, spec.tools)
 
-    # Reason: Prepend context with a label so the worker LLM can distinguish
-    # background data from the structured 5-section task prompt.
     full_task = f"CONTEXT:\n{context}\n\n{task}" if context else task
 
     try:
@@ -158,7 +156,6 @@ def deploy_scoped_worker(
             tools=tools,
             notebook=notebook,
             system_prompt=spec.system_prompt,
-            provider=spec.provider or WORKER_PROVIDER,
             model=spec.model or WORKER_MODEL,
             chat_callback=worker_callback,
             max_iterations=spec.max_iterations,

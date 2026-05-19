@@ -32,7 +32,6 @@ class TaxHarvesterAgent(Agent):
         *,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "tax_harvester",
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.VERBOSE,
     ):
@@ -45,8 +44,7 @@ class TaxHarvesterAgent(Agent):
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider=provider or "anthropic",
-            model=model or "claude-sonnet-4-6",
+            model=model,
             print_mode=print_mode,
         )
 
@@ -56,6 +54,6 @@ class TaxHarvesterAgent(Agent):
 
 
 if __name__ == "__main__":
-    agent = TaxHarvesterAgent(provider="anthropic", model="claude-opus-4-7")
+    agent = TaxHarvesterAgent(model="anthropic/claude-opus-4.7")
     response = agent.run()
     print(response)

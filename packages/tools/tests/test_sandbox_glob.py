@@ -39,8 +39,7 @@ def _print_result(title: str, result) -> None:
 def _make_agent() -> Agent:
     """Create an Agent loaded with sandbox tools."""
     return Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
         print_mode=PrintMode.DEBUG,
         tools=SANDBOX_TOOLS,
     )

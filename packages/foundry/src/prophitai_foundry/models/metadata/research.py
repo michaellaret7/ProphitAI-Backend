@@ -16,7 +16,24 @@ from prophitai_foundry.models.metadata.utils import (
     sanitize_for_vector_id,
     split_file_name,
 )
-from prophitai_shared import get_backend
+from prophitai_shared import build_client
+
+# Reason: GPT models support `response_format={"type": "json_object"}` via OpenRouter.
+# Cheap/fast slug used here since metadata extraction is bounded.
+METADATA_MODEL = "openai/gpt-5.4"
+
+
+def _llm_json(prompt: str, model: str) -> str:
+    """Call OpenRouter in JSON-object mode and return the response string."""
+    client, resolved_model = build_client(model)
+
+    response = client.chat.completions.create(
+        model=resolved_model,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
+    )
+
+    return response.choices[0].message.content or "{}"
 
 
 class ResearchDocumentMetadata(BaseModel):
@@ -74,16 +91,14 @@ class ResearchDocumentMetadata(BaseModel):
         cls,
         s3_uri: str,
         document_type: Optional[str] = None,
-        provider: str = "groq",
-        model: str = "llama-3.1-8b-instant",
+        model: str = METADATA_MODEL,
     ) -> "ResearchDocumentMetadata":
         """
         Extract metadata from an S3 URI using LLM-based parsing.
 
         Args:
             s3_uri: Full S3 URI (s3://bucket/key/to/file.pdf).
-            provider: LLM provider to use for extraction.
-            model: Model name to use for extraction.
+            model: OpenRouter model slug for extraction.
 
         Returns:
             ResearchDocumentMetadata with fields populated from LLM extraction.
@@ -91,12 +106,8 @@ class ResearchDocumentMetadata(BaseModel):
         s3_bucket, s3_key = parse_s3_uri(s3_uri)
         file_name, file_extension = split_file_name(s3_key)
 
-        backend = get_backend(provider=provider, model=model)
-        response_json = backend.call_llm_json(
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"""Parse the following S3 URI into structured metadata.
+        response_json = _llm_json(
+            f"""Parse the following S3 URI into structured metadata.
 
 URI: {s3_uri}
 
@@ -108,8 +119,7 @@ Return a JSON object with these fields:
 - ticker: if the document is about a specific stock, extract the ticker symbol (e.g., AAPL, MSFT), null if it's general/macro research
 
 Return ONLY valid JSON, no other text.""",
-                }
-            ],
+            model,
         )
 
         parsed = json.loads(response_json)
@@ -133,8 +143,7 @@ Return ONLY valid JSON, no other text.""",
         cls,
         s3_uris: list[str],
         document_type: Optional[str] = None,
-        provider: str = "groq",
-        model: str = "llama-3.1-8b-instant",
+        model: str = METADATA_MODEL,
     ) -> list["ResearchDocumentMetadata"]:
         """
         Extract metadata from multiple S3 URIs in a single LLM call.
@@ -143,21 +152,15 @@ Return ONLY valid JSON, no other text.""",
 
         Args:
             s3_uris: List of S3 URIs to parse.
-            provider: LLM provider to use.
-            model: Model name to use.
+            model: OpenRouter model slug for extraction.
 
         Returns:
             List of ResearchDocumentMetadata instances.
         """
-        backend = get_backend(provider=provider, model=model)
-
         uris_formatted = "\n".join(f"{i+1}. {uri}" for i, uri in enumerate(s3_uris))
 
-        response_json = backend.call_llm_json(
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"""Parse each of the following S3 URIs into structured metadata.
+        response_json = _llm_json(
+            f"""Parse each of the following S3 URIs into structured metadata.
 
 URIs:
 {uris_formatted}
@@ -170,8 +173,7 @@ Return a JSON object with a "documents" array where each element has:
 - ticker: if the document is about a specific stock, extract the ticker symbol (e.g., AAPL, MSFT), null if it's general/macro research
 
 Return ONLY valid JSON, no other text.""",
-                }
-            ],
+            model,
         )
 
         parsed = json.loads(response_json)

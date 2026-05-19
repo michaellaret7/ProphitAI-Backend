@@ -469,8 +469,7 @@ def test_indicator_builder() -> None:
         agent = IndicatorBuilderAgent(
             sandbox_id=sandbox_id,
             chat_callback=NoOpChatCallback(),
-            provider="anthropic",
-            model="claude-sonnet-4-6",
+            model="anthropic/claude-sonnet-4.6",
         )
 
         response = agent.run(manifest)

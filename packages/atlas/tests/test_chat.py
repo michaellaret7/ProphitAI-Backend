@@ -10,8 +10,7 @@ from prophitai_atlas.models import PrintMode, ChatSession
 
 def main():
     agent = Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
         print_mode=PrintMode.PRODUCTION,
         temperature=0.7,
     )
@@ -19,7 +18,7 @@ def main():
     session = ChatSession(session_id="test-session")
 
     print("=" * 60)
-    print("Interactive Chat Test")
+    print("Interactive Chat Test (OpenRouter)")
     print("Type your message and press Enter. Ctrl+C to exit.")
     print("=" * 60)
 

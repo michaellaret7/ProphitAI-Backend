@@ -41,7 +41,6 @@ class IdeaGeneratorAgent:
         *,
         chat_callback: Optional[Union[ChatCallback, NoOpChatCallback]] = None,
         session_id: str = "idea_generation",
-        provider: Optional[str] = None,
         model: Optional[str] = None,
         print_mode: PrintMode = PrintMode.VERBOSE,
     ):
@@ -54,8 +53,7 @@ class IdeaGeneratorAgent:
             system_prompt=system_prompt,
             chat_callback=chat_callback,
             session_id=session_id,
-            provider='anthropic',
-            model='claude-opus-4-7',
+            model=model or "anthropic/claude-opus-4.7",
             print_mode=print_mode,
         )
 

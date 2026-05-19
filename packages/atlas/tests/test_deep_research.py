@@ -304,15 +304,13 @@ class DeepResearchAgent:
 
     def __init__(
         self,
-        provider: str = "anthropic",
-        model: str = "claude-sonnet-4-6",
+        model: str = "anthropic/claude-sonnet-4.6",
         print_mode: PrintMode = PrintMode.VERBOSE,
         max_iterations: int = 150,
     ) -> None:
         system_prompt = build_deep_research_prompt()
 
         self._agent = Agent(
-            provider=provider,
             model=model,
             max_iterations=max_iterations,
             print_mode=print_mode,
@@ -320,12 +318,11 @@ class DeepResearchAgent:
             system_prompt=system_prompt,
         )
 
-    def run(self, query: str, max_iterations: int | None = None):
+    def run(self, query: str):
         """Execute deep research on the given query.
 
         Args:
             query: The research question or topic to investigate.
-            max_iterations: Override for max iterations (default uses constructor value).
 
         Returns:
             AgentResponse with the full research report in .answer
@@ -333,7 +330,6 @@ class DeepResearchAgent:
         return self._agent.run(
             user_message=query,
             plan_first=True,
-            max_iterations=max_iterations,
         )
 
 
@@ -345,8 +341,7 @@ def test_deep_research():
     """Run a real deep research query through the agent."""
 
     agent = DeepResearchAgent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
         print_mode=PrintMode.PRODUCTION,
         max_iterations=150,
     )

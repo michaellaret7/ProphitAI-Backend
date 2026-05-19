@@ -167,8 +167,8 @@ def run_test(name: str, fn):
 def test_agent_base_prompt():
     """Agent with no system_prompt should use generic base prompt and work for simple queries."""
     agent = Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
+        max_iterations=15,
         print_mode=PrintMode.PRODUCTION,
         deferred_tools=FAKE_TOOLS,
         # no system_prompt — should use build_base_system_prompt
@@ -183,7 +183,6 @@ def test_agent_base_prompt():
             "Use register_tools to load the market_data category, "
             "then get a quote for AAPL. Report the price."
         ),
-        max_iterations=15,
     )
 
     assert result.stop_reason == "answer_ready", f"Expected answer_ready, got {result.stop_reason}"
@@ -203,8 +202,8 @@ def test_agent_custom_chat_prompt():
     chat_prompt = build_chat_system_prompt()
 
     agent = Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
+        max_iterations=15,
         print_mode=PrintMode.PRODUCTION,
         deferred_tools=FAKE_TOOLS,
         system_prompt=chat_prompt,
@@ -217,7 +216,6 @@ def test_agent_custom_chat_prompt():
 
     result = agent.run(
         user_message="What's AAPL trading at?",
-        max_iterations=15,
     )
 
     assert result.stop_reason == "answer_ready", f"Expected answer_ready, got {result.stop_reason}"
@@ -236,8 +234,8 @@ def test_agent_orchestrator_prompt_plan_first():
     orchestrator_prompt = build_orchestrator_system_prompt()
 
     agent = Agent(
-        provider="anthropic",
-        model="claude-sonnet-4-6",
+        model="anthropic/claude-sonnet-4.6",
+        max_iterations=50,
         print_mode=PrintMode.PRODUCTION,
         deferred_tools=FAKE_TOOLS,
         system_prompt=orchestrator_prompt,
@@ -254,7 +252,6 @@ def test_agent_orchestrator_prompt_plan_first():
             "fundamentals and performance. Build a summary of the best picks."
         ),
         plan_first=True,
-        max_iterations=50,
     )
 
     assert result.stop_reason == "answer_ready", f"Expected answer_ready, got {result.stop_reason}"

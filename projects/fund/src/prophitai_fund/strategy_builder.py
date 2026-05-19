@@ -23,8 +23,7 @@ from prophitai_tools.sandbox.client import REPO_PATH, get_sandbox
 from prophitai_tools.sandbox.lifecycle import close_sandbox
 from prophitai_tools.sandbox.scaffolding import scaffold_strategy
 
-MODEL = "claude-sonnet-4-6"
-PROVIDER = "anthropic"
+MODEL = "anthropic/claude-sonnet-4.6"
 
 
 class StrategyBuilder:
@@ -148,7 +147,7 @@ class StrategyBuilder:
             idea_path = f"{REPO_PATH}/strategies/development/{strategy_id}/IDEA.md"
             get_sandbox(sandbox_id).files.write(idea_path, idea_text)
 
-            strategy_architect = StrategyArchitectAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
+            strategy_architect = StrategyArchitectAgent(model=MODEL, sandbox_id=sandbox_id)
             architect_response = strategy_architect.run(idea_text, strategy_id=strategy_id)
 
             manifest = architect_response.parsed_output
@@ -179,7 +178,7 @@ class StrategyBuilder:
         print(f"[stage 3: indicators] sandbox {sandbox_id} started")
 
         try:
-            indicator_builder = IndicatorBuilderAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
+            indicator_builder = IndicatorBuilderAgent(model=MODEL, sandbox_id=sandbox_id)
             indicator_response = indicator_builder.run(manifest)
 
             indicator_result = indicator_response.parsed_output
@@ -206,7 +205,7 @@ class StrategyBuilder:
         print(f"[stage 4: signals] sandbox {sandbox_id} started")
 
         try:
-            signal_strategy_builder = SignalStrategyBuilderAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
+            signal_strategy_builder = SignalStrategyBuilderAgent(model=MODEL, sandbox_id=sandbox_id)
             signal_response = signal_strategy_builder.run(manifest, indicator_result)
 
             signal_result = signal_response.parsed_output
@@ -234,7 +233,7 @@ class StrategyBuilder:
         print(f"[stage 5: execution] sandbox {sandbox_id} started")
 
         try:
-            execution_layer_builder = ExecutionLayerBuilderAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
+            execution_layer_builder = ExecutionLayerBuilderAgent(model=MODEL, sandbox_id=sandbox_id)
             execution_response = execution_layer_builder.run(manifest, indicator_result, signal_result)
 
             if not execution_response.parsed_output:
@@ -250,7 +249,7 @@ class StrategyBuilder:
         print(f"[stage 6: validator] sandbox {sandbox_id} started")
 
         try:
-            validator = ValidatorAgent(model=MODEL, provider=PROVIDER, sandbox_id=sandbox_id)
+            validator = ValidatorAgent(model=MODEL, sandbox_id=sandbox_id)
             validation_response = validator.run(strategy_id=strategy_id)
 
             verdict = validation_response.parsed_output
